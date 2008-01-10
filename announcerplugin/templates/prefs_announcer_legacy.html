@@ -1,0 +1,20 @@
+<span xmlns="http://www.w3.org/1999/xhtml"
+     xmlns:py="http://genshi.edgewall.org/"
+     xmlns:xi="http://www.w3.org/2001/XInclude">
+  The legacy mode has been activated by the administrators, with the following options:
+  <ul>
+    <li py:if="always_notify_owner">
+      <input type="checkbox" name="legacy_notify_owner" checked="${legacy_notify_owner}" value="1" />
+      Always notify the ticket's owner.
+    </li>        
+    <li py:if="always_notify_reporter">
+      <input type="checkbox" name="legacy_notify_reporter" checked="${legacy_notify_reporter}" value="1" />
+      Always notify the ticket's reporter.
+    </li>        
+    <li py:if="always_notify_updater">
+      <input type="checkbox" name="legacy_notify_updater" checked="${legacy_notify_updater}" value="1" />
+      Always notify the person updating the ticket.
+    </li>        
+  </ul>
+  If you would like to opt-out of any of these announcements, simply uncheck them.
+</span>
