@@ -12,7 +12,7 @@ class RuleBasedTicketSubscriber(Component):
     def get_subscription_categories(self, realm):
         return ('created', 'changed')
         
-    def check_event(self, event):
+    def get_subscriptions_for_event(self, event):
         return
         yield
         # db = self.env.get_db_cnx()

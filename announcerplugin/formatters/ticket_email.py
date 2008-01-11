@@ -7,23 +7,23 @@ class TicketEmailFormatter(Component):
     
     default_email_format = Option('announcer', 'default_email_format', 'plaintext')
     
-    def get_format_scheme(self):
+    def get_format_transport(self):
         return "email"
         
-    def get_format_realms(self, perspective):
-        if perspective == "email":
+    def get_format_realms(self, transport):
+        if transport == "email":
             yield "ticket"
         return
         
-    def get_format_styles(self, perspective, realm):
-        if perspective == "email":
+    def get_format_styles(self, transport, realm):
+        if transport == "email":
             if realm == "ticket":
                 yield "plaintext"
                 yield "html"
                 
         return
 
-    def format(self, scheme, realm, style, event):
+    def format(self, transport, realm, style, event):
         if realm == "ticket":
             if hasattr(self, '_format_%s' % style):
                 return getattr(self, '_format_%s' % style)(event)

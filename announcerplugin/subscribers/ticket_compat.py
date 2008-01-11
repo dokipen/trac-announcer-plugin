@@ -92,7 +92,7 @@ class LegacyTicketSubscriber(Component):
         else:
             return tuple()
             
-    def check_event(self, event):
+    def get_subscriptions_for_event(self, event):
         if event.realm == "ticket":
             ticket = event.target
             if event.category == "created":

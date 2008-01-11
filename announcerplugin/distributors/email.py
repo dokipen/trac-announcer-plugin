@@ -91,24 +91,24 @@ class EmailDistributor(Component):
         will disable it.(''since 0.10.1'').""")
 
     # IAnnouncementDistributor
-    def get_distribution_scheme(self):
+    def get_distribution_transport(self):
         return "email"
         
-    def distribute(self, scheme, recipients, event):
-        if scheme == self.get_distribution_scheme():
+    def distribute(self, transport, recipients, event):
+        if transport == self.get_distribution_transport():
             formats = {}
             
             for f in self.formatters:
-                if f.get_format_scheme() == scheme:
-                    if event.realm in f.get_format_realms(scheme):
-                        styles = f.get_format_styles(scheme, event.realm)
+                if f.get_format_transport() == transport:
+                    if event.realm in f.get_format_realms(transport):
+                        styles = f.get_format_styles(transport, event.realm)
                         for style in styles:
                             formats[style] = f
             
             self.log.debug(
                 "EmailDistributor has found the following formats capable "
                 "of handling '%s' of '%s': %s" % (
-                    scheme, event.realm, ', '.join(formats.keys())
+                    transport, event.realm, ', '.join(formats.keys())
                 )
             )
             
@@ -135,7 +135,7 @@ class EmailDistributor(Component):
                 #         format, ', '.join(messages[format])
                 #     )
                 # )
-                self._do_send(scheme, event, format, messages[format], formats[format])
+                self._do_send(transport, event, format, messages[format], formats[format])
 
     def _get_default_format(self):
         return 'plaintext'
@@ -160,12 +160,12 @@ class EmailDistributor(Component):
         else:
             return self._get_default_format()
             
-    def _do_send(self, scheme, event, format, recipients, formatter):
+    def _do_send(self, transport, event, format, recipients, formatter):
         print "SENDING", recipients
         for name, address in recipients:
             print name, address
             print self.resolvers
-        output = formatter.format(scheme, event.realm, format, event)
+        output = formatter.format(transport, event.realm, format, event)
         print "THE OUTPUT IS", output
         
         
@@ -176,17 +176,17 @@ class EmailDistributor(Component):
     def render_announcement_preference_box(self, req, panel):
         cfg = self.config
         sess = req.session
-        scheme = self.get_distribution_scheme()
+        transport = self.get_distribution_transport()
         
         supported_realms = {}
         for formatter in self.formatters:
-            if formatter.get_format_scheme() == scheme:
-                for realm in formatter.get_format_realms(scheme):
+            if formatter.get_format_transport() == transport:
+                for realm in formatter.get_format_realms(transport):
                     if realm not in supported_realms:
                         supported_realms[realm] = set()
                         
                     supported_realms[realm].update(
-                       formatter.get_format_styles(scheme, realm)
+                       formatter.get_format_styles(transport, realm)
                     )
                     
         
