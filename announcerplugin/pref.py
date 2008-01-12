@@ -7,15 +7,12 @@ from announcerplugin.api import IAnnouncementPreferenceProvider
 from trac.web.chrome import Chrome
 
 def truth(v):
-    print 'V=', v
     if v in (False, 'False', 'false', 0, '0', ''):
-        print 'false'
         return None
-    print 'true'
     return True
 
 class AnnouncerPreferences(Component):
-    implements(IPreferencePanelProvider, ITemplateProvider, IRequestHandler)
+    implements(IPreferencePanelProvider, ITemplateProvider)
     
     preference_boxes = ExtensionPoint(IAnnouncementPreferenceProvider)
     
@@ -25,9 +22,8 @@ class AnnouncerPreferences(Component):
     def get_templates_dirs(self):
         resource_dir = resource_filename(__name__, 'templates')
         return [resource_dir]
-
+        
     def get_preference_panels(self, req):
-        print 'REQ', req.authname
         if req.authname and req.authname != 'anonymous':
             yield ('announcer', 'Announcements')
         
@@ -61,12 +57,4 @@ class AnnouncerPreferences(Component):
         
         return 'prefs_announcer.html', {"boxes": streams, "style": style.render()}
         
-    def match_request(self, req):
-        print "MATCH?!"
-        print req
-        print req.path_info
-        return False
-        
-    def process_request(self, req):
-        return '', {}
         

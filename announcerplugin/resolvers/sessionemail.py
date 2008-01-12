@@ -15,7 +15,7 @@ class SessionEmailResolver(Component):
               FROM session_attribute
              WHERE sid=%s
                AND name=%s
-        """, (sid, 'email'))
+        """, (name, 'email'))
                 
         for record in sorted(cursor.fetchall(), key=lambda x: x[1]):
             return record[0]

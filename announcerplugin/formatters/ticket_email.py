@@ -32,6 +32,8 @@ class TicketEmailFormatter(Component):
     
     default_email_format = Option('announcer', 'default_email_format', 'plaintext')
     
+    ticket_email_subject = Option('announcer', 'ticket_email_subject', "Ticket #${ticket.id}: ${ticket['summary']}")
+    
     def get_format_transport(self):
         return "email"
         
@@ -47,18 +49,18 @@ class TicketEmailFormatter(Component):
                 yield "html"
                 
         return
-
+        
+    def format_subject(self, transport, realm, style, event):
+        if transport == "email":
+            if realm == "ticket":
+                template = NewTextTemplate(self.ticket_email_subject)
+                return template.generate(ticket=event.target, event=event).render()
+                
     def format(self, transport, realm, style, event):
-        if realm == "ticket":
-            if hasattr(self, '_format_%s' % style):
-                return getattr(self, '_format_%s' % style)(event)
-
-    def _load_text_template(self, chrome, filename):
-        # print 'Load', chrome.templates
-        if not chrome.templates:
-            return None
-            
-        return chrome.templates.load(filename, cls=NewTextTemplate)
+        if transport == "email":
+            if realm == "ticket":
+                if hasattr(self, '_format_%s' % style):
+                    return getattr(self, '_format_%s' % style)(event)
 
     def _format_plaintext(self, event):
         ticket = event.target

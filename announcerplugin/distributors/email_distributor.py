@@ -9,7 +9,21 @@ from announcerplugin.api import AnnouncementSystem
 
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
+import time, Queue, threading, smtplib
 
+class DeliveryThread(threading.Thread):
+    def __init__(self, queue, sender):
+        threading.Thread.__init__(self)
+        self._sender = sender
+        self._queue = queue
+        self.setDaemon(True)
+        
+    def run(self):
+        while 1:
+            sendfrom, recipients, message = self._queue.get()
+            
+            self._sender(sendfrom, recipients, message)
+            
 class EmailDistributor(Component):
     
     implements(IAnnouncementDistributor, IAnnouncementPreferenceProvider)
@@ -92,7 +106,16 @@ class EmailDistributor(Component):
         If the setting is not defined, then the [$project_name] prefix.
         If no prefix is desired, then specifying an empty option 
         will disable it.(''since 0.10.1'').""")
-
+    
+    use_threaded_delivery = BoolOption('announcer', 'use_threaded_delivery', False, 
+    """If true, the actual delivery of the message will occur in a separate thread.""")
+    
+    def __init__(self):
+        if self.use_threaded_delivery:
+            self._deliveryQueue = Queue.Queue()
+            thread = DeliveryThread(self._deliveryQueue, self._transmit)
+            thread.start()
+    
     # IAnnouncementDistributor
     def get_distribution_transport(self):
         return "email"
@@ -126,19 +149,27 @@ class EmailDistributor(Component):
                 if format not in messages:
                     messages[format] = set()
                     
-                # if name and not address:
-                #     address = self._resolve
-                    
-                messages[format].add((name, address))
+                if name and not address:
+                    for resolver in self.resolvers:
+                        address = resolver.get_address_for_name(name)
+                        if address:
+                            break
+                            
+                if address:
+                    messages[format].add((name, address))
+                else:
+                    self.log.debug("EmailDistributor was unable to find an address for: %s" % name)
                     
             for format in messages.keys():
-                # print 'ER', messages[format]
-                # self.log.debug(
-                #     "EmailDistributor is sending event as '%s' to: %s" % (
-                #         format, ', '.join(messages[format])
-                #     )
-                # )
-                self._do_send(transport, event, format, messages[format], formats[format])
+                if messages[format]:
+                    self.log.debug(
+                        "EmailDistributor is sending event as '%s' to: %s" % (
+                            format, ', '.join(
+                                ('%s <%s>' % (name, address) for name, address in messages[format])
+                            )
+                        )
+                    )
+                    self._do_send(transport, event, format, messages[format], formats[format])
 
     def _get_default_format(self):
         return 'plaintext'
@@ -165,24 +196,36 @@ class EmailDistributor(Component):
             
     def _do_send(self, transport, event, format, recipients, formatter, backup=None):
         output = formatter.format(transport, event.realm, format, event)
+        subject = formatter.format_subject(transport, event.realm, format, event)
         
         parentMessage = MIMEMultipart("related")
-        parentMessage['Subject'] = "Message Subject"
-        parentMessage['From'] = 'Bob'
-        parentMessage['To'] = 'Sam'
+        parentMessage['Subject'] = subject
+        parentMessage['From'] = self.smtp_from
+        parentMessage['To'] = self.env.project_name
+        parentMessage['Reply-To'] = self.smtp_replyto
         parentMessage.preamble = 'This is a multi-part message in MIME format.'
         
         msgText = MIMEText(output, 'html')
         parentMessage.attach(msgText)
         
-        import smtplib
+        start = time.time()
+        
+        package = (self.smtp_from, [x[1] for x in recipients if x], parentMessage.as_string() )
+        if self.use_threaded_delivery:
+            self._deliveryQueue.put(package)
+        else:
+            self._transmit(*package)
+            
+        stop = time.time()
+        self.log.debug("EmailDistributor took %s seconds to send." % (round(stop-start,2)))
+
+    def _transmit(self, smtpfrom, addresses, message):
         smtp = smtplib.SMTP()
         smtp.connect(self.smtp_server)
         smtp.login(self.smtp_user, self.smtp_password)
-        for name, address in recipients:
-            smtp.sendmail(self.smtp_from, address, parentMessage.as_string)
+        smtp.sendmail(smtpfrom, addresses, message)
         smtp.quit()
-
+        
     # IAnnouncementDistributor
     def get_announcement_preference_boxes(self, req):
         yield "email", "E-Mail Format"

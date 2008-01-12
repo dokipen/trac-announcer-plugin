@@ -2,6 +2,7 @@ from trac.core import *
 from trac.util.compat import set
 from trac.db import Table, Column, Index
 from trac.env import IEnvironmentSetupParticipant
+import time
 
 class IAnnouncementSubscriber(Interface):
     """IAnnouncementSubscriber provides an interface where a Plug-In can 
@@ -103,6 +104,9 @@ class IAnnouncementFormatter(Interface):
         expects.
         """
         
+    def format_subject(transport, realm, style, event):
+        """Returns a suitable subject line for the specified event."""
+
 class IAnnouncementDistributor(Interface):
     """The Distributor is responsible for actually delivering an event to the
     desired subscriptions.
@@ -306,6 +310,12 @@ class AnnouncementSystem(Component):
     # The actual AnnouncementSystem now..    
 
     def send(self, evt):
+        start = time.time()
+        self._real_send(evt)
+        stop = time.time()
+        self.log.debug("AnnouncementSystem sent event in %s seconds." % (round(stop-start,2)))
+
+    def _real_send(self, evt):
         """Accepts a single AnnouncementEvent instance (or subclass), and
         returns nothing. 
         

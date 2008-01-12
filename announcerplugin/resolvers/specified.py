@@ -18,7 +18,7 @@ class SpecifiedEmailResolver(Component):
              WHERE sid=%s
                AND authenticated=1
                AND name=%s
-        """, (sid,'specified_email'))
+        """, (name,'specified_email'))
         
         result = cursor.fetchone()
         if result:
