@@ -7,6 +7,9 @@ from announcerplugin.api import IAnnouncementPreferenceProvider
 from announcerplugin.api import IAnnouncementAddressResolver
 from announcerplugin.api import AnnouncementSystem
 
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
+
 class EmailDistributor(Component):
     
     implements(IAnnouncementDistributor, IAnnouncementPreferenceProvider)
@@ -160,15 +163,26 @@ class EmailDistributor(Component):
         else:
             return self._get_default_format()
             
-    def _do_send(self, transport, event, format, recipients, formatter):
-        print "SENDING", recipients
-        for name, address in recipients:
-            print name, address
-            print self.resolvers
+    def _do_send(self, transport, event, format, recipients, formatter, backup=None):
         output = formatter.format(transport, event.realm, format, event)
-        print "THE OUTPUT IS", output
         
+        parentMessage = MIMEMultipart("related")
+        parentMessage['Subject'] = "Message Subject"
+        parentMessage['From'] = 'Bob'
+        parentMessage['To'] = 'Sam'
+        parentMessage.preamble = 'This is a multi-part message in MIME format.'
         
+        msgText = MIMEText(output, 'html')
+        parentMessage.attach(msgText)
+        
+        import smtplib
+        smtp = smtplib.SMTP()
+        smtp.connect(self.smtp_server)
+        smtp.login(self.smtp_user, self.smtp_password)
+        for name, address in recipients:
+            smtp.sendmail(self.smtp_from, address, parentMessage.as_string)
+        smtp.quit()
+
     # IAnnouncementDistributor
     def get_announcement_preference_boxes(self, req):
         yield "email", "E-Mail Format"

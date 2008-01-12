@@ -35,13 +35,13 @@ class SpecifiedEmailResolver(Component):
         sess = req.session
 
         if req.method == "POST":
-            for realm in supported_realms:
-                opt = req.args.get('specified_email', False)
-                if opt:
-                    sess['announcer_specified_email'] = opt
-        
+            opt = req.args.get('specified_email', '')
+            sess['announcer_specified_email'] = opt
+
+        specified = sess.get('announcer_specified_email', '')
+            
         data = dict(
-            specified_email = sess.get('announcer_specified_email', None),
+            specified_email = specified,
         )
         
         return "prefs_announcer_emailaddress.html", data    

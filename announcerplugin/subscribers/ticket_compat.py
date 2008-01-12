@@ -25,7 +25,7 @@ class StaticTicketSubscriber(Component):
     def get_subscription_categories(self, realm):
         return self._returnval
         
-    def check_event(self, event):
+    def get_subscriptions_for_event(self, event):
         self.log.debug("StaticTicketSubscriber added '%s' because of rule: smtp_always_bcc" % self.bcc)
         yield ('email', None, self.bcc)
 
@@ -145,7 +145,7 @@ class CarbonCopySubscriber(Component):
     def get_subscription_categories(self, *args):
         return ('changed', )
         
-    def check_event(self, event):
+    def get_subscriptions_for_event(self, event):
         if event.realm == 'ticket':
             if event.category == 'changed':
                 cc = event.target['cc']

@@ -331,7 +331,7 @@ class AnnouncementSystem(Component):
             subscriptions = set()
             for sp in supported_subscribers:
                 subscriptions.update(
-                    x for x in sp.check_event(evt) if x
+                    x for x in sp.get_subscriptions_for_event(evt) if x
                 )
         
             self.log.debug(
