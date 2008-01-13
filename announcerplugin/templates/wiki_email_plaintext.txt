@@ -1,0 +1,7 @@
+
+ * The user '${author}' has changed the ${page.name} page.
+
+--
+Page URL: <URL:${page_link}>
+${project_name} <URL:${project_link}>
+${project_desc}

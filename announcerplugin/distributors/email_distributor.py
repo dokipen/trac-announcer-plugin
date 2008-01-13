@@ -107,7 +107,12 @@ class EmailDistributor(Component):
         will disable it.(''since 0.10.1'').""")
     
     use_threaded_delivery = BoolOption('announcer', 'use_threaded_delivery', False, 
-    """If true, the actual delivery of the message will occur in a separate thread.""")
+    """If true, the actual delivery of the message will occur in a separate thread.
+    
+    Enabling this will improve responsiveness for requests that end up with an
+    announcement being sent over email. It requires building Python with threading
+    support enabled-- which is usually the case. To test, start Python and type
+    'import threading' to see if it raises an error.""")
     
     default_email_format = Option('announcer', 'default_email_format', 'text/plain')
     
@@ -138,6 +143,12 @@ class EmailDistributor(Component):
                     transport, event.realm, ', '.join(formats.keys())
                 )
             )
+            
+            if not formats:
+                self.log.error(
+                    "EmailDistributor is unable to continue without supporting formatters."
+                )
+                return
             
             messages = {}
 

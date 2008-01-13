@@ -267,14 +267,13 @@ class AnnouncementSystem(Component):
     SCHEMA = [
         Table('subscriptions', key='id')[
             Column('id', auto_increment=True),
-            Column('sid'),
+            Column('sid'), Column('authenticated', type='int'),
             Column('enabled', type='int'),
-            Column('managed', type='int'),
+            Column('managed'),
             Column('realm'),
             Column('category'),
             Column('rule'),
-            Column('destination'),
-            Column('format'),
+            Column('transport'),
             Index(['id']),
             Index(['realm', 'category', 'enabled']),
         ]

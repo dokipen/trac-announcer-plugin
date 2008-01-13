@@ -66,8 +66,8 @@ class JoinableGroupSubscriber(Component):
                 result = req.args.get(group_opt, None)
                 if result:
                     sess["announcer_" + group_opt] = '1'
-                else:
-                    if group_opt in sess:
+                else:                    
+                    if "announcer_" + group_opt in sess:
                         del sess["announcer_" + group_opt]
 
         groups = {}
