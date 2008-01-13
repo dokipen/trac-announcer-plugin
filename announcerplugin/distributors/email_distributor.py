@@ -1,11 +1,13 @@
 from trac.core import Component, implements, ExtensionPoint
 from trac.util.compat import set, sorted
 from trac.config import Option, BoolOption, IntOption, OrderedExtensionsOption
+from trac.util import get_pkginfo
 from announcerplugin.api import IAnnouncementDistributor
 from announcerplugin.api import IAnnouncementFormatter
 from announcerplugin.api import IAnnouncementPreferenceProvider
 from announcerplugin.api import IAnnouncementAddressResolver
 from announcerplugin.api import AnnouncementSystem
+import announcerplugin, trac
 
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
@@ -64,10 +66,7 @@ class EmailDistributor(Component):
     smtp_always_bcc = Option('announcer', 'smtp_always_bcc', '',
         """Email address(es) to always send notifications to,
            addresses do not appear publicly (Bcc:). (''since 0.10'').""")
-           
-    smtp_default_domain = Option('announcer', 'smtp_default_domain', '',
-        """Default host/domain to append to address that do not specify one""")
-        
+                   
     ignore_domains = Option('announcer', 'ignore_domains', '',
         """Comma-separated list of domains that should not be considered
            part of email addresses (for usernames with Kerberos domains)""")
@@ -110,6 +109,8 @@ class EmailDistributor(Component):
     use_threaded_delivery = BoolOption('announcer', 'use_threaded_delivery', False, 
     """If true, the actual delivery of the message will occur in a separate thread.""")
     
+    default_email_format = Option('announcer', 'default_email_format', 'text/plain')
+    
     def __init__(self):
         if self.use_threaded_delivery:
             self._deliveryQueue = Queue.Queue()
@@ -148,11 +149,15 @@ class EmailDistributor(Component):
                     
                 if format not in messages:
                     messages[format] = set()
-                    
+                
                 if name and not address:
                     for resolver in self.resolvers:
                         address = resolver.get_address_for_name(name)
                         if address:
+                            self.log.debug("EmailDistributor found the address '%s' for '%s' via: %s" % (
+                                    address, name, resolver.__class__.__name__
+                                )
+                            )
                             break
                             
                 if address:
@@ -170,9 +175,9 @@ class EmailDistributor(Component):
                         )
                     )
                     self._do_send(transport, event, format, messages[format], formats[format])
-
+                    
     def _get_default_format(self):
-        return 'plaintext'
+        return self.default_email_format
         
     def _get_preferred_format(self, realm, sid):
         db = self.env.get_db_cnx()
@@ -198,24 +203,54 @@ class EmailDistributor(Component):
         output = formatter.format(transport, event.realm, format, event)
         subject = formatter.format_subject(transport, event.realm, format, event)
         
-        parentMessage = MIMEMultipart("related")
-        parentMessage['Subject'] = subject
-        parentMessage['From'] = self.smtp_from
-        parentMessage['To'] = self.env.project_name
-        parentMessage['Reply-To'] = self.smtp_replyto
-        parentMessage.preamble = 'This is a multi-part message in MIME format.'
+        alternate_format = formatter.get_format_alternative(transport, event.realm, format)
+        if alternate_format:
+            alternate_output = formatter.format(transport, event.realm, alternate_format, event)
+        else:
+            alternate_output = None
+            
+        rootMessage = MIMEMultipart("related")
+        trac_version = get_pkginfo(trac.core).get('version', trac.__version__)
+        announcer_version = get_pkginfo(announcerplugin).get('version', 'Undefined')
         
-        msgText = MIMEText(output, 'html')
+        rootMessage['X-Mailer'] = 'AnnouncerPlugin v%s on Trac v%s' % (announcer_version, trac_version)
+        rootMessage['X-Trac-Version'] = trac_version
+        rootMessage['X-Announcer-Version'] = announcer_version
+        rootMessage['X-Trac-Project'] = self.env.project_name
+        rootMessage['Precedence'] = 'bulk'
+        rootMessage['Auto-Submitted'] = 'auto-generated'
+        
+        provided_headers = formatter.format_headers(transport, event.realm, format, event)
+        for key in provided_headers:
+            rootMessage['X-Announcement-%s' % key.capitalize()] = str(provided_headers[key])
+        
+        rootMessage['Subject'] = subject
+        rootMessage['From'] = self.smtp_from
+        rootMessage['To'] = self.env.project_name
+        rootMessage['Reply-To'] = self.smtp_replyto
+        rootMessage.preamble = 'This is a multi-part message in MIME format.'
+        
+        if alternate_output:
+            parentMessage = MIMEMultipart('alternative')
+            rootMessage.attach(parentMessage)
+        else:
+            parentMessage = rootMessage
+        
+        if alternate_output:
+            msgText = MIMEText(alternate_output, 'html' in alternate_format and 'html' or 'plain')
+            parentMessage.attach(msgText)
+        
+        msgText = MIMEText(output, 'html' in format and 'html' or 'plain')
         parentMessage.attach(msgText)
         
         start = time.time()
         
-        package = (self.smtp_from, [x[1] for x in recipients if x], parentMessage.as_string() )
+        package = (self.smtp_from, [x[1] for x in recipients if x], rootMessage.as_string() )
         if self.use_threaded_delivery:
             self._deliveryQueue.put(package)
         else:
             self._transmit(*package)
-            
+
         stop = time.time()
         self.log.debug("EmailDistributor took %s seconds to send." % (round(stop-start,2)))
 

@@ -17,7 +17,7 @@ Reporter: ${ticket['reporter']}
 ---------------------------------------------------------------------
 ${ticket['description']}
 {% end %}\
-{% if has_changes %}\
+{% if has_changes or attachment %}\
 ---------------------------------------------------------------------
 Changes (by ${author}): 
 {% for change in short_changes %}
@@ -34,6 +34,10 @@ Changes (by ${author}):
  * ${change}:
 ${long_changes[change]}
 {% end %}\
+{% end %}\
+{% if attachment %}\
+Attachment:
+ * File '${attachment.filename}' added{% if attachment.description %}: ${attachment.description} {% end %}
 {% end %}
 {% if comment %}\
 ---------------------------------------------------------------------

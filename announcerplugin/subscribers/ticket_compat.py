@@ -3,6 +3,7 @@ from announcerplugin.api import IAnnouncementSubscriber, IAnnouncementPreference
 from trac.ticket import model
 from trac.web.chrome import add_warning
 from trac.config import BoolOption
+import re
 
 class StaticTicketSubscriber(Component):
     """The static ticket subscriber implements a policy to -always- send an email to a
@@ -88,14 +89,14 @@ class LegacyTicketSubscriber(Component):
         
     def get_subscription_categories(self, realm):
         if realm == 'ticket':
-            return ('created', 'changed')
+            return ('created', 'changed', 'attachment added')
         else:
             return tuple()
             
     def get_subscriptions_for_event(self, event):
         if event.realm == "ticket":
             ticket = event.target
-            if event.category == "created":
+            if event.category in ('changed', 'attachment added'):
                 component = model.Component(self.env, ticket['component'])
                 if component.owner:
                     ## TODO: Is this an option?
@@ -132,7 +133,7 @@ class LegacyTicketSubscriber(Component):
         if result:
             r = result[0] == '0'
             self.log.debug("LegacyTicketSubscriber excluded '%s' because of opt-out rule: %s" % (sid,preference))
-            return r
+            return True
         
         return False
 
@@ -143,19 +144,24 @@ class CarbonCopySubscriber(Component):
         return ('ticket',)
         
     def get_subscription_categories(self, *args):
-        return ('changed', )
+        return ('changed', 'attachment added')
         
     def get_subscriptions_for_event(self, event):
         if event.realm == 'ticket':
-            if event.category == 'changed':
+            if event.category in ('changed', 'attachment added'):
                 cc = event.target['cc']
-                for chunk in cc.split(','):
+                for chunk in re.split('\s|,', cc):
+                    chunk = chunk.strip()
+                    if not chunk or chunk.startswith('@'):
+                        continue
+                        
                     if '@' in chunk:
-                        address = chunk.strip()
+                        address = chunk
                         name = None
                     else:
-                        name = chunk.strip()
+                        name = chunk
                         address = None
+                        
                     if name or address:
                         self.log.debug("CarbonCopySubscriber added '%s <%s>' because of rule: carbon copied" % (name,address))
                         yield ('email', name, address)

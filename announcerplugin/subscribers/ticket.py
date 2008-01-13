@@ -10,7 +10,7 @@ class RuleBasedTicketSubscriber(Component):
         return ('ticket', )
         
     def get_subscription_categories(self, realm):
-        return ('created', 'changed')
+        return ('created', 'changed', 'attachment added')
         
     def get_subscriptions_for_event(self, event):
         return

@@ -1,14 +1,9 @@
 from trac.core import *
 from trac.attachment import IAttachmentChangeListener
-from announcerplugin.api import AnnouncementSystem, AnnouncementEvent
+from announcerplugin.api import AnnouncementSystem
+from announcerplugin.producers.ticket import TicketChangeEvent
+from trac.ticket.model import Ticket
 
-class AttachmentChangeEvent(AnnouncementEvent):
-    def __init__(self, realm, category, target, 
-                 author=None):
-        AnnouncementEvent.__init__(self, realm, category, target)
-
-        self.author = author
-                
 class AttachmentChangeProducer(Component):
     implements(IAttachmentChangeListener)
     
@@ -16,17 +11,22 @@ class AttachmentChangeProducer(Component):
         pass
 
     def attachment_added(self, attachment):
-        announcer = AnnouncementSystem(ticket.env)
-        announcer.send(
-            AttachmentChangeEvent(attachment.parent_realm, "attachment added",
-                attachment, author=attachment.author, 
-            )
-        )            
+        parent = attachment.resource.parent
+
+        if parent.realm == "ticket":
+            ticket = Ticket(self.env, parent.id)
+            announcer = AnnouncementSystem(ticket.env)
+            announcer.send(
+                TicketChangeEvent("ticket", "attachment added", ticket,
+                    attachment=attachment, author=attachment.author, 
+                )
+            )            
 
     def attachment_deleted(self, attachment):
-        announcer = AnnouncementSystem(ticket.env)
-        announcer.send(
-            AttachmentChangeEvent(attachment.parent_realm, "attachment added", 
-                attachment, author=attachment.author, 
-            )
-        )
+        # announcer = AnnouncementSystem(ticket.env)
+        # announcer.send(
+        #     AttachmentChangeEvent(attachment.parent_realm, "attachment added", 
+        #         attachment, author=attachment.author, 
+        #     )
+        # )
+        pass

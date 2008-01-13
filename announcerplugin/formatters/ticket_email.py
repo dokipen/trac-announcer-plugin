@@ -29,9 +29,7 @@ def lineup(gen):
 
 class TicketEmailFormatter(Component):
     implements(IAnnouncementFormatter)
-    
-    default_email_format = Option('announcer', 'default_email_format', 'plaintext')
-    
+        
     ticket_email_subject = Option('announcer', 'ticket_email_subject', "Ticket #${ticket.id}: ${ticket['summary']}")
     
     def get_format_transport(self):
@@ -45,10 +43,27 @@ class TicketEmailFormatter(Component):
     def get_format_styles(self, transport, realm):
         if transport == "email":
             if realm == "ticket":
-                yield "plaintext"
-                yield "html"
+                yield "text/plain"
+                yield "text/html"
                 
         return
+        
+    def get_format_alternative(self, transport, realm, style):
+        if transport == "email":
+            if realm == "ticket":
+                if style == "text/html":
+                    return "text/plain"
+
+        return None
+        
+    def format_headers(self, transport, realm, style, event):
+        ticket = event.target
+        return dict(
+            realm=realm,
+            ticket=ticket.id,
+            priority=ticket['priority'],
+            severity=ticket['severity']            
+        )
         
     def format_subject(self, transport, realm, style, event):
         if transport == "email":
@@ -59,8 +74,10 @@ class TicketEmailFormatter(Component):
     def format(self, transport, realm, style, event):
         if transport == "email":
             if realm == "ticket":
-                if hasattr(self, '_format_%s' % style):
-                    return getattr(self, '_format_%s' % style)(event)
+                if style == "text/plain":
+                    return self._format_plaintext(event)
+                elif style == "text/html":
+                    return self._format_html(event)
 
     def _format_plaintext(self, event):
         ticket = event.target
@@ -99,6 +116,7 @@ class TicketEmailFormatter(Component):
             has_changes = short_changes or long_changes,
             long_changes = long_changes,
             short_changes = short_changes,
+            attachment= event.attachment
         )
         
         chrome = Chrome(self.env)        
@@ -154,6 +172,7 @@ class TicketEmailFormatter(Component):
             has_changes = short_changes or long_changes,
             long_changes = long_changes,
             short_changes = short_changes,
+            attachment= event.attachment            
         )
         
         output = chrome.render_template(None, "ticket_email_mimic.html", data, content_type="text/html", fragment = True)

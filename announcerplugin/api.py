@@ -93,7 +93,10 @@ class IAnnouncementFormatter(Interface):
         transport.
         
         If a single item is to be returned, use yield instead of return."""
-
+        
+    def get_format_alternative(transport, realm, style):
+        """..."""
+        
     def format(transport, realm, style, event):
         """Converts the event into the specified style. If the transport or
         realm passed into this method are not ones this formatter can handle,
@@ -106,6 +109,9 @@ class IAnnouncementFormatter(Interface):
         
     def format_subject(transport, realm, style, event):
         """Returns a suitable subject line for the specified event."""
+        
+    def format_headers(transport, realm, style, event):
+        """..."""
 
 class IAnnouncementDistributor(Interface):
     """The Distributor is responsible for actually delivering an event to the
