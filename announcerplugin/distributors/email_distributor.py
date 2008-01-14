@@ -31,7 +31,7 @@ class EmailDistributor(Component):
     implements(IAnnouncementDistributor, IAnnouncementPreferenceProvider)
 
     formatters = ExtensionPoint(IAnnouncementFormatter)
-    resolvers = OrderedExtensionsOption('announcer', 'address_resolvers', 
+    resolvers = OrderedExtensionsOption('announcer', 'email_address_resolvers', 
         IAnnouncementAddressResolver, 'SessionEmailResolver', 
     )
 

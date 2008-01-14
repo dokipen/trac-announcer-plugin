@@ -3,7 +3,7 @@ from trac.core import *
 from trac.config import ListOption
 from trac.web.api import IRequestFilter, IRequestHandler, Href
 from trac.web.chrome import ITemplateProvider, add_ctxtnav, add_stylesheet, \
-                            add_script, add_warning
+                            add_script
 from trac.resource import get_resource_url
 from trac.ticket.api import ITicketChangeListener
 from trac.wiki.api import IWikiChangeListener
@@ -15,7 +15,7 @@ class WatchSubscriber(Component):
     implements(IRequestFilter, IRequestHandler, IAnnouncementSubscriber,
         ITicketChangeListener, IWikiChangeListener)
 
-    watchable_paths = ListOption('vote', 'paths', '/wiki*,/ticket*',
+    watchable_paths = ListOption('announcer', 'watchable_paths', '/wiki*,/ticket*',
         doc='List of URL paths to allow voting on. Globs are supported.')
 
     path_match = re.compile(r'/watch/(.*)')
@@ -34,18 +34,36 @@ class WatchSubscriber(Component):
         realm, _ = resource.split('/', 1)
         req.perm.require('%s_VIEW' % realm.upper())
         
-        self.toggle_watched(req.session.sid, not req.authname == 'anonymous', resource)
+        self.toggle_watched(req.session.sid, not req.authname == 'anonymous', resource, req)
 
         req.redirect(req.href(resource))
 
-    def toggle_watched(self, sid, authenticated, resource):
+    def toggle_watched(self, sid, authenticated, resource, req=None):
         realm, resource = resource.split('/', 1)
         
         if self.is_watching(sid, authenticated, realm, resource):
             self.set_unwatch(sid, authenticated, realm, resource)
+            self._schedule_notice(req, 'You are now watching this resource for changes.')
         else:
             self.set_watch(sid, authenticated, realm, resource)
+            self._schedule_notice(req, 'You are no longer watching this resource for changes.')
             
+    def _schedule_notice(self, req, message):
+        req.session['_announcer_watch_message_'] = message
+                    
+    def _add_notice(self, req):
+        if '_announcer_watch_message_' in req.session:
+
+            # This is temporary during 0.11b1 as add_notice was added later 
+            # for the final 0.11 release.
+            try: 
+                from trac.web.chrome import add_notice
+            except:
+                from trac.web.chrome import add_warning as add_notice
+            
+            add_notice(req, req.session['_announcer_watch_message_'])
+            del req.session['_announcer_watch_message_']
+                    
     def is_watching(self, sid, authenticated, realm, resource):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
@@ -114,7 +132,9 @@ class WatchSubscriber(Component):
             db.commit()
             
     # IRequestFilter methods
-    def pre_process_request(self, req, handler):        
+    def pre_process_request(self, req, handler):
+        self._add_notice(req)
+        
         if req.authname != "anonymous":
             for path in self.watchable_paths:
                 if re.match(path, req.path_info):
