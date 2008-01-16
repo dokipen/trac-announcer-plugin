@@ -1,6 +1,6 @@
 from trac.core import Component, implements, ExtensionPoint
 from trac.prefs.api import IPreferencePanelProvider
-from trac.web.chrome import ITemplateProvider
+from trac.web.chrome import ITemplateProvider, add_stylesheet
 from trac.web import IRequestHandler
 from pkg_resources import resource_filename
 from announcerplugin.api import IAnnouncementPreferenceProvider
@@ -17,8 +17,7 @@ class AnnouncerPreferences(Component):
     preference_boxes = ExtensionPoint(IAnnouncementPreferenceProvider)
     
     def get_htdocs_dirs(self):
-        resource_dir = resource_filename(__name__, 'htdocs')
-        return [resource_dir]
+        return [('announcer', resource_filename(__name__, 'htdocs'))]
 
     def get_templates_dirs(self):
         resource_dir = resource_filename(__name__, 'templates')
@@ -50,12 +49,9 @@ class AnnouncerPreferences(Component):
                     )
                 )
             )
+            
+        add_stylesheet(req, 'announcer/css/announcer_prefs.css')
         
-        style = chrome.render_template(
-            req, "announcer_style.css", {}, 
-            content_type='text/plain', fragment=True
-        )
-        
-        return 'prefs_announcer.html', {"boxes": streams, "style": style.render()}
+        return 'prefs_announcer.html', {"boxes": streams}
         
         
