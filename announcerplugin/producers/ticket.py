@@ -14,6 +14,26 @@ class TicketChangeEvent(AnnouncementEvent):
         self.changes = changes
         self.attachment = attachment
 
+    def get_basic_terms(self):
+        for term in AnnouncementEvent.get_basic_terms(self):
+            yield term
+        
+        ticket = self.target
+        yield ticket['component']
+
+    def get_session_terms(self, session_id):
+        ticket = self.target
+        
+        if session_id == self.author:
+            yield "updater"
+            
+        if session_id == ticket['owner']:
+            yield "owner"
+        
+        if session_id == ticket['reporter']:
+            yield "reporter"
+            
+        
 class TicketChangeProducer(Component):
     implements(ITicketChangeListener)
     

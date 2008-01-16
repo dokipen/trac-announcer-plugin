@@ -38,8 +38,8 @@ setup(
     license = \
     """Copyright (c) 2008, Stephen Hansen. All rights reserved. Released under the 3-clause BSD license. """,
     url = "http://www.trac-hacks.org/wiki/AnnouncerPlugin",
-    packages = ['announcerplugin'],
-    package_data = {'announcerplugin': ['templates/*.html']},
+    packages = find_packages(exclude=['*.tests*']),
+    package_data = {'announcerplugin': ['templates/*.html', 'templates/*.txt', 'htdocs/*.*', 'htdocs/css/*.*']},
     install_requires = [
         #'trac>=0.11',
     ],

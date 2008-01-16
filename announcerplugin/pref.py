@@ -17,7 +17,8 @@ class AnnouncerPreferences(Component):
     preference_boxes = ExtensionPoint(IAnnouncementPreferenceProvider)
     
     def get_htdocs_dirs(self):
-        return []
+        resource_dir = resource_filename(__name__, 'htdocs')
+        return [resource_dir]
 
     def get_templates_dirs(self):
         resource_dir = resource_filename(__name__, 'templates')

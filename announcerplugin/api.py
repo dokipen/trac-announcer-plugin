@@ -225,6 +225,12 @@ class AnnouncementEvent(object):
         self.realm = realm
         self.category = category
         self.target = target
+         
+    def get_basic_terms(self):
+        return (self.realm, self.category)
+        
+    def get_session_terms(self, session_id):
+        return tuple()
                 
 _TRUE_VALUES = ('yes', 'true', 'enabled', 'on', 'aye', '1', 1, True)
 
