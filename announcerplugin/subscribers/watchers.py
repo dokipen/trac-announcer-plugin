@@ -15,7 +15,7 @@ class WatchSubscriber(Component):
     implements(IRequestFilter, IRequestHandler, IAnnouncementSubscriber,
         ITicketChangeListener, IWikiChangeListener)
 
-    watchable_paths = ListOption('announcer', 'watchable_paths', '/,/wiki*,/ticket*',
+    watchable_paths = ListOption('announcer', 'watchable_paths', 'wiki/*,ticket/*',
         doc='List of URL paths to allow voting on. Globs are supported.')
 
     path_match = re.compile(r'/watch/(.*)')
@@ -136,12 +136,10 @@ class WatchSubscriber(Component):
         self._add_notice(req)
         
         if req.authname != "anonymous":
-            for path in self.watchable_paths:
-                if re.match(path, req.path_info):
-                    if req.path_info == '/':
-                        realm = 'wiki'
-                    else:
-                        realm, _ = self.normalise_resource(req.path_info).split('/', 1)
+            for pattern in self.watchable_paths:
+                path = self.normalise_resource(req.path_info)
+                if re.match(pattern, path):
+                    realm, _ = path.split('/', 1)
     
                     if '%s_VIEW' % realm.upper() not in req.perm:
                         return handler
@@ -156,12 +154,8 @@ class WatchSubscriber(Component):
 
     # Internal methods
     def render_watcher(self, req):
-        if req.path_info == '/':
-            resource = 'WikiStart'
-            realm = 'wiki'
-        else:
-            resource = self.normalise_resource(req.path_info)
-            realm, resource = resource.split('/', 1)
+        resource = self.normalise_resource(req.path_info)
+        realm, resource = resource.split('/', 1)
                 
         if self.is_watching(req.session.sid, not req.authname == 'anonymous', realm, resource):
             action_name = "Unwatch This"
@@ -178,7 +172,9 @@ class WatchSubscriber(Component):
         if isinstance(resource, basestring):
             resource = resource.strip('/')
             # Special-case start page
-            if resource == 'wiki':
+            if not resource:
+                resource = "wiki/WikiStart"
+            elif resource == 'wiki':
                 resource += '/WikiStart'
             return resource
         return get_resource_url(self.env, resource, Href('')).strip('/')
