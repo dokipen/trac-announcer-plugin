@@ -96,23 +96,23 @@ class LegacyTicketSubscriber(Component):
     def get_subscriptions_for_event(self, event):
         if event.realm == "ticket":
             ticket = event.target
-            if event.category in ('changed', 'attachment added'):
+            
+            if event.category in ('created', 'changed', 'attachment added'):
                 component = model.Component(self.env, ticket['component'])
                 if component.owner:
                     ## TODO: Is this an option?
                     self.log.debug("LegacyTicketSubscriber added '%s' because of rule: component owner" % (component.owner,))
                     yield ('email', component.owner, None)
-                                    
-            elif event.category == "changed":
-                if self.always_notify_owner and not self._check_opt_out('notify_owner', ticket['owner']):                   
+                                                    
+                if self.always_notify_owner and ticket['owner'] and not self._check_opt_out('notify_owner', ticket['owner']):                   
                     self.log.debug("LegacyTicketSubscriber added '%s' because of rule: always_notify_owner" % ticket['owner'])
                     yield ('email', ticket['owner'], None)
                     
-                if self.always_notify_reporter and not self._check_opt_out('notify_reporter', ticket['reporter']):
+                if self.always_notify_reporter and ticket['reporter'] and not self._check_opt_out('notify_reporter', ticket['reporter']):
                     self.log.debug("LegacyTicketSubscriber added '%s' because of rule: always_notify_reporter" % ticket['reporter'])
                     yield ('email', ticket['reporter'], None)
                     
-                if self.always_notify_updater and not self._check_opt_out('notify_updater', event.author):
+                if self.always_notify_updater and event.author and not self._check_opt_out('notify_updater', event.author):
                     self.log.debug("LegacyTicketSubscriber added '%s' because of rule: always_notify_updater" % event.author)
                     yield ('email', event.author, None)
         return
@@ -131,9 +131,10 @@ class LegacyTicketSubscriber(Component):
                 
         result = cursor.fetchone()
         if result:
-            r = result[0] == '0'
-            self.log.debug("LegacyTicketSubscriber excluded '%s' because of opt-out rule: %s" % (sid,preference))
-            return True
+            optout = (result[0] == '0')
+            if optout:
+                self.log.debug("LegacyTicketSubscriber excluded '%s' because of opt-out rule: %s" % (sid,preference))
+                return True
         
         return False
 
@@ -143,8 +144,9 @@ class CarbonCopySubscriber(Component):
     def get_subscription_realms(self):
         return ('ticket',)
         
-    def get_subscription_categories(self, *args):
-        return ('changed', 'attachment added')
+    def get_subscription_categories(self, realm):
+        if realm == 'ticket':
+            return ('changed', 'attachment added')
         
     def get_subscriptions_for_event(self, event):
         if event.realm == 'ticket':

@@ -55,7 +55,7 @@ class TicketChangeProducer(Component):
         )
         
     def ticket_changed(self, ticket, comment, author, old_values):
-        if old_values.keys() == ['cc'] and not comment:
+        if old_values.keys() == ['cc'] and not comment and self.ignore_cc_changes:
             return
             
         announcer = AnnouncementSystem(ticket.env)

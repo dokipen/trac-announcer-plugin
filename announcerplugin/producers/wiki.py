@@ -1,3 +1,5 @@
+import inspect
+
 from trac.core import *
 from trac.config import BoolOption
 from trac.wiki.api import IWikiChangeListener
@@ -6,7 +8,8 @@ from announcerplugin.api import AnnouncementSystem, AnnouncementEvent
 class WikiChangeEvent(AnnouncementEvent):
     def __init__(self, realm, category, target, 
                  comment=None, author=None, version=None, 
-                 timestamp=None, remote_addr=None):
+                 timestamp=None, remote_addr=None,
+                 attachment=None):
         AnnouncementEvent.__init__(self, realm, category, target)
 
         self.author = author
@@ -14,15 +17,20 @@ class WikiChangeEvent(AnnouncementEvent):
         self.version = version
         self.timestamp = timestamp
         self.remote_addr = remote_addr
+        self.attachment = attachment
 
 class WikiChangeProducer(Component):
     implements(IWikiChangeListener)
     
     def wiki_page_added(self, page):
-        pass
+        announcer = AnnouncementSystem(page.env)
+        announcer.send(
+            WikiChangeEvent("wiki", "created", page,
+                author=page.author            
+            )
+        )        
         
     def wiki_page_changed(self, page, version, t, comment, author, ipnr):
-        print "PAGE NAME", page.name
         announcer = AnnouncementSystem(page.env)
         announcer.send(
             WikiChangeEvent("wiki", "changed", page,
@@ -32,8 +40,14 @@ class WikiChangeProducer(Component):
         )
         
     def wiki_page_deleted(page):
-        """Called when a page has been deleted."""
-
+        announcer = AnnouncementSystem(page.env)
+        announcer.send(
+            WikiChangeEvent("wiki", "deleted", page)
+        )
+        
     def wiki_page_version_deleted(page):
-        """Called when a version of a page has been deleted."""
-                
+        announcer = AnnouncementSystem(page.env)
+        announcer.send(
+            WikiChangeEvent("wiki", "version deleted", page)
+        )
+        

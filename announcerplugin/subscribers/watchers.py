@@ -232,7 +232,6 @@ class WatchSubscriber(Component):
         return ('changed', 'attachment added')
         
     def get_subscriptions_for_event(self, event):
-        print "CHecking subscription", event.realm
         if event.realm in self.get_subscription_realms():
             if event.category in self.get_subscription_categories(event.realm):
                 db = self.env.get_db_cnx()
