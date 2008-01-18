@@ -76,7 +76,7 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, authenticated, 'watcher', realm, 'changed', resource))
+        """, (sid, authenticated and 1 or 0, 'watcher', realm, 'changed', resource))
         
         result = cursor.fetchone()
         if result:
