@@ -34,7 +34,7 @@ class WatchSubscriber(Component):
         realm, _ = resource.split('/', 1)
         req.perm.require('%s_VIEW' % realm.upper())
         
-        self.toggle_watched(req.session.sid, not req.authname == 'anonymous', resource, req)
+        self.toggle_watched(req.session.sid, (not req.authname == 'anonymous') and 1 or 0, resource, req)
 
         req.redirect(req.href(resource))
 
@@ -76,7 +76,7 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, authenticated and 1 or 0, 'watcher', realm, 'changed', resource))
+        """, (sid, authenticated and 1 or 0, 'watcher', realm, '*', resource))
         
         result = cursor.fetchone()
         if result:
@@ -126,7 +126,7 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, authenticated, 'watcher', realm, 'changed', resource))
+        """, (sid, authenticated, 'watcher', realm, '*', resource))
         
         if not use_db:
             db.commit()
@@ -248,7 +248,7 @@ class WatchSubscriber(Component):
                        AND realm=%s
                        AND category=%s
                        AND rule=%s
-                """, ('watcher', event.realm, 'changed', self._get_target_identifier(event.realm, event.target)))
+                """, ('watcher', event.realm, '*', self._get_target_identifier(event.realm, event.target)))
             
                 for transport, sid in cursor.fetchall():
                     self.log.debug("WatchSubscriber added '%s' because of rule: watched" % (sid,))
