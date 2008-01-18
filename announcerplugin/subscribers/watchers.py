@@ -15,7 +15,7 @@ class WatchSubscriber(Component):
     implements(IRequestFilter, IRequestHandler, IAnnouncementSubscriber,
         ITicketChangeListener, IWikiChangeListener)
 
-    watchable_paths = ListOption('announcer', 'watchable_paths', '/wiki*,/ticket*',
+    watchable_paths = ListOption('announcer', 'watchable_paths', '/,/wiki*,/ticket*',
         doc='List of URL paths to allow voting on. Globs are supported.')
 
     path_match = re.compile(r'/watch/(.*)')
@@ -43,10 +43,10 @@ class WatchSubscriber(Component):
         
         if self.is_watching(sid, authenticated, realm, resource):
             self.set_unwatch(sid, authenticated, realm, resource)
-            self._schedule_notice(req, 'You are now watching this resource for changes.')
+            self._schedule_notice(req, 'You are no longer watching this resource for changes.')
         else:
             self.set_watch(sid, authenticated, realm, resource)
-            self._schedule_notice(req, 'You are no longer watching this resource for changes.')
+            self._schedule_notice(req, 'You are now watching this resource for changes.')
             
     def _schedule_notice(self, req, message):
         req.session['_announcer_watch_message_'] = message
@@ -103,7 +103,7 @@ class WatchSubscriber(Component):
                          %s, %s)
         """, (
                 sid, authenticated, 
-                'watcher', realm, 'changed', 
+                'watcher', realm, '*', 
                 resource, 'email'
             )
         )
@@ -138,7 +138,11 @@ class WatchSubscriber(Component):
         if req.authname != "anonymous":
             for path in self.watchable_paths:
                 if re.match(path, req.path_info):
-                    realm, _ = self.normalise_resource(req.path_info).split('/', 1)
+                    if req.path_info == '/':
+                        realm = 'wiki'
+                    else:
+                        realm, _ = self.normalise_resource(req.path_info).split('/', 1)
+    
                     if '%s_VIEW' % realm.upper() not in req.perm:
                         return handler
                     
@@ -152,8 +156,12 @@ class WatchSubscriber(Component):
 
     # Internal methods
     def render_watcher(self, req):
-        resource = self.normalise_resource(req.path_info)
-        realm, resource = resource.split('/', 1)
+        if req.path_info == '/':
+            resource = 'WikiStart'
+            realm = 'wiki'
+        else:
+            resource = self.normalise_resource(req.path_info)
+            realm, resource = resource.split('/', 1)
                 
         if self.is_watching(req.session.sid, not req.authname == 'anonymous', realm, resource):
             action_name = "Unwatch This"
@@ -229,7 +237,7 @@ class WatchSubscriber(Component):
         return ('wiki', 'ticket')
         
     def get_subscription_categories(self, realm):
-        return ('changed', 'attachment added')
+        return ('created', 'changed', 'attachment added')
         
     def get_subscriptions_for_event(self, event):
         if event.realm in self.get_subscription_realms():
