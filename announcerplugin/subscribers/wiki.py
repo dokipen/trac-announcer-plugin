@@ -10,42 +10,44 @@ class GeneralWikiSubscriber(Component):
         
     def get_subscription_realms(self):
         return ('wiki',)
-    
-    def get_subscription_categories(self, *args):
-        return ('changed', 'created', 'attachment added', 'deleted', 'version deleted')
-    
+        
+    def get_subscription_categories(self, realm):
+        if realm == "wiki":
+            return ('changed', 'created', 'attachment added', 'deleted', 'version deleted')
+        else:
+            return tuple()
+            
     def get_subscriptions_for_event(self, event):
         if event.realm == 'wiki':
             if event.category in self.get_subscription_categories(event.realm):
                 page = event.target
-                for name in self._get_membership(page.name):                    
-                    yield ('email', name, None)
-                            
+                for name, authenticated in self._get_membership(page.name):
+                    yield ('email', name, authenticated, None)
+        
     def _get_membership(self, name):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
         
         cursor.execute("""
-            SELECT sid, value
+            SELECT sid, authenticated, value
               FROM session_attribute
-             WHERE authenticated=1
-               AND name=%s
+             WHERE name=%s
         """, ('announcer_wiki_interests', ))
         
-        for result in cursor.fetchall():
-            for raw in result[1].split(' '):
+        for sid, authenticated, value in cursor.fetchall():
+            for raw in value.split(' '):
                 pat = urllib.unquote(raw)
                 if re.match(pat, name):
                     self.log.debug(
-                        "GeneralWikiSubscriber added '%s' because name '%s' matches pattern: %s" % (
-                            result[0], name, pat
+                        "GeneralWikiSubscriber added '%s (%s)' because name '%s' matches pattern: %s" % (
+                            sid, authenticated and 'authenticated' or 'not authenticated', name, pat
                         )
                     )
-                    yield result[0]
-
+                    yield sid, authenticated
+                    
     def get_announcement_preference_boxes(self, req):
         yield "general_wiki", "General Wiki Announcements"
-
+        
     def render_announcement_preference_box(self, req, panel):
         sess = req.session
         

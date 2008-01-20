@@ -38,7 +38,7 @@ class IAnnouncementSubscriber(Interface):
         specified event.
         
         Each subscription that is returned is in the form of:
-            ('transport', 'name', 'address')
+            ('transport', 'name', authenticated, 'address')
         
         The transport should be one that a distributor (and formatter) can
         handle, but if not? The events will be dropped later at the
@@ -194,7 +194,7 @@ class IAnnouncementPreferenceProvider(Interface):
 class IAnnouncementAddressResolver(Interface):
     """Handles mapping Trac usernames to addresses for distributors to use."""
     
-    def get_address_for_name(name):
+    def get_address_for_name(name, authenticated):
         """Accepts a session name, and returns an address.
         
         This address explicitly does not always have to mean an email address,
@@ -342,33 +342,33 @@ class AnnouncementSystem(Component):
                 categories = sp.get_subscription_categories(evt.realm)
                 if ('*' in categories) or (evt.category in categories):
                     supported_subscribers.append(sp)
-        
+            
             self.log.debug(
                 "AnnouncementSystem found the following subscribers capable of "
                 "handling '%s, %s': %s" % (evt.realm, evt.category, 
                 ', '.join([ss.__class__.__name__ for ss in supported_subscribers]))
             )
-        
+            
             subscriptions = set()
             for sp in supported_subscribers:
                 subscriptions.update(
                     x for x in sp.get_subscriptions_for_event(evt) if x
                 )
-        
+            
             self.log.debug(
                 "AnnouncementSystem has found the following subscriptions: %s" % (
                     ', '.join(
-                        ['(%s via %s)' % ((s[1] or s[2]), s[0]) for s in subscriptions]
+                        ['[%s(%s) via %s]' % ((s[1] or s[3]), s[2] and 'authenticated' or 'not authenticated',s[0]) for s in subscriptions]
                     )
                 )
             )
-        
+            
             packages = {}
-            for transport, target, address in subscriptions:
+            for transport, sid, authenticated, address in subscriptions:
                 if transport not in packages:
                     packages[transport] = set()
             
-                packages[transport].add((target,address))
+                packages[transport].add((sid,authenticated,address))
             
             for distributor in self.distributors:
                 transport = distributor.get_distribution_transport()

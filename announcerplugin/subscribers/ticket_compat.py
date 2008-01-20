@@ -28,7 +28,7 @@ class StaticTicketSubscriber(Component):
         
     def get_subscriptions_for_event(self, event):
         self.log.debug("StaticTicketSubscriber added '%s' because of rule: smtp_always_bcc" % self.bcc)
-        yield ('email', None, self.bcc)
+        yield ('email', None, False, self.bcc)
 
 class LegacyTicketSubscriber(Component):
     implements(IAnnouncementSubscriber, IAnnouncementPreferenceProvider)
@@ -102,19 +102,40 @@ class LegacyTicketSubscriber(Component):
                 if component.owner:
                     ## TODO: Is this an option?
                     self.log.debug("LegacyTicketSubscriber added '%s' because of rule: component owner" % (component.owner,))
-                    yield ('email', component.owner, None)
-                                                    
+                    yield ('email', component.owner, True, None)
+                    
                 if self.always_notify_owner and ticket['owner'] and not self._check_opt_out('notify_owner', ticket['owner']):                   
-                    self.log.debug("LegacyTicketSubscriber added '%s' because of rule: always_notify_owner" % ticket['owner'])
-                    yield ('email', ticket['owner'], None)
+                    owner = ticket['owner']
+                    if '@' in owner:
+                        name, authenticated, address = None, False, owner
+                    else:
+                        name, authenticated, address = owner, True, None
+                    
+                    self.log.debug(
+                        "LegacyTicketSubscriber added '%s (%s)' because of rule: always_notify_owner" % (
+                            owner, authenticated and 'authenticated' or 'not authenticated'
+                        )
+                    )
+                    yield ('email', name, authenticated, address)
                     
                 if self.always_notify_reporter and ticket['reporter'] and not self._check_opt_out('notify_reporter', ticket['reporter']):
-                    self.log.debug("LegacyTicketSubscriber added '%s' because of rule: always_notify_reporter" % ticket['reporter'])
-                    yield ('email', ticket['reporter'], None)
+                    reporter = ticket['reporter']
+                    if '@' in reporter:
+                        name, authenticated, address = None, False, reporter
+                    else:
+                        name, authenticated, address = reporter, True, None
+                    
+                    self.log.debug(
+                        "LegacyTicketSubscriber added '%s (%s)' because of rule: always_notify_reporter" % (
+                            reporter, authenticated and 'authenticated' or 'not authenticated'
+                        )
+                    )
+                    yield ('email', name, authenticated, address)
                     
                 if self.always_notify_updater and event.author and not self._check_opt_out('notify_updater', event.author):
-                    self.log.debug("LegacyTicketSubscriber added '%s' because of rule: always_notify_updater" % event.author)
-                    yield ('email', event.author, None)
+                    self.log.debug("LegacyTicketSubscriber added '%s (authenticated)' because of rule: always_notify_updater" % event.author)
+                    yield ('email', event.author, True, None)
+            
         return
         
     def _check_opt_out(self, preference, sid):
@@ -146,7 +167,9 @@ class CarbonCopySubscriber(Component):
         
     def get_subscription_categories(self, realm):
         if realm == 'ticket':
-            return ('changed', 'attachment added')
+            yield 'changed'
+            yield 'attachment added'
+        return
         
     def get_subscriptions_for_event(self, event):
         if event.realm == 'ticket':
@@ -166,4 +189,5 @@ class CarbonCopySubscriber(Component):
                         
                     if name or address:
                         self.log.debug("CarbonCopySubscriber added '%s <%s>' because of rule: carbon copied" % (name,address))
-                        yield ('email', name, address)
+                        yield ('email', name, name and True or False, address)
+        

@@ -6,18 +6,19 @@ from announcerplugin.api import IAnnouncementAddressResolver
 class SessionEmailResolver(Component):
     implements(IAnnouncementAddressResolver)
     
-    def get_address_for_name(self, name):
+    def get_address_for_name(self, name, authenticated):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        
         cursor.execute("""
-            SELECT value, authenticated
+            SELECT value
               FROM session_attribute
              WHERE sid=%s
+               AND authenticated=%s
                AND name=%s
-        """, (name, 'email'))
-                
-        for record in sorted(cursor.fetchall(), key=lambda x: x[1]):
-            return record[0]
+        """, (name, authenticated and 1 or 0, 'email'))
+        
+        result = cursor.fetchone()
+        if result:
+            return result[0]
             
         return None

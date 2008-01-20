@@ -135,20 +135,20 @@ class WatchSubscriber(Component):
     def pre_process_request(self, req, handler):
         self._add_notice(req)
         
-        if req.authname != "anonymous":
+        if req.authname != "anonymous" or (req.authname == 'anonymous' and 'email' in req.session):
             for pattern in self.watchable_paths:
                 path = self.normalise_resource(req.path_info)
                 if re.match(pattern, path):
                     realm, _ = path.split('/', 1)
-    
+                    
                     if '%s_VIEW' % realm.upper() not in req.perm:
                         return handler
                     
                     self.render_watcher(req)
                     break
-
+                    
         return handler
-
+        
     def post_process_request(self, req, template, data, content_type):
         return (template, data, content_type)
 
@@ -180,13 +180,13 @@ class WatchSubscriber(Component):
         return get_resource_url(self.env, resource, Href('')).strip('/')
         
     # IWikiChangeListener
-    def wiki_page_added(self, page):
+    def wiki_page_added(*args):
         pass
         
-    def wiki_page_changed(self, page, version, t, comment, author, ipnr):
+    def wiki_page_changed(*args):
         pass
         
-    def wiki_page_deleted(page):
+    def wiki_page_deleted(self, page):
         db = self.env.get_db_cnx()
 
         cursor = db.cursor()
@@ -201,15 +201,15 @@ class WatchSubscriber(Component):
 
         db.commit()
 
-    def wiki_page_version_deleted(page):
+    def wiki_page_version_deleted(*args):
         pass
 
     # ITicketChangeListener
     
-    def ticket_created(self, ticket):
+    def ticket_created(*args):
         pass
         
-    def ticket_changed(self, ticket, comment, author, old_values):
+    def ticket_changed(*args):
         pass
         
     def ticket_deleted(self, ticket):
@@ -242,7 +242,7 @@ class WatchSubscriber(Component):
                 cursor = db.cursor()
                 
                 cursor.execute("""
-                    SELECT transport, sid
+                    SELECT transport, sid, authenticated
                       FROM subscriptions
                      WHERE enabled=1 AND managed=%s
                        AND realm=%s
@@ -250,9 +250,12 @@ class WatchSubscriber(Component):
                        AND rule=%s
                 """, ('watcher', event.realm, '*', self._get_target_identifier(event.realm, event.target)))
             
-                for transport, sid in cursor.fetchall():
-                    self.log.debug("WatchSubscriber added '%s' because of rule: watched" % (sid,))
-                    yield (transport, sid, None)
+                for transport, sid, authenticated in cursor.fetchall():
+                    self.log.debug("WatchSubscriber added '%s (%s)' because of rule: watched" % (
+                        sid,authenticated and 'authenticated' or 'not authenticated'
+                        )
+                    )
+                    yield (transport, sid, authenticated, None)
                     
     def _get_target_identifier(self, realm, target):
         if realm == "wiki":

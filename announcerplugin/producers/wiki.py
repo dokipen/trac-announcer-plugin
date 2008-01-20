@@ -23,10 +23,11 @@ class WikiChangeProducer(Component):
     implements(IWikiChangeListener)
     
     def wiki_page_added(self, page):
+        history = list(page.get_history())[0]
         announcer = AnnouncementSystem(page.env)
         announcer.send(
             WikiChangeEvent("wiki", "created", page,
-                author=page.author            
+                author=history[2], version=history[0]  
             )
         )        
         
@@ -39,13 +40,13 @@ class WikiChangeProducer(Component):
             )
         )
         
-    def wiki_page_deleted(page):
+    def wiki_page_deleted(self, page):
         announcer = AnnouncementSystem(page.env)
         announcer.send(
             WikiChangeEvent("wiki", "deleted", page)
         )
         
-    def wiki_page_version_deleted(page):
+    def wiki_page_version_deleted(self, page):
         announcer = AnnouncementSystem(page.env)
         announcer.send(
             WikiChangeEvent("wiki", "version deleted", page)

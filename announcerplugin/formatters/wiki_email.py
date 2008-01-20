@@ -30,7 +30,7 @@ def lineup(gen):
 class WikiEmailFormatter(Component):
     implements(IAnnouncementFormatter)
         
-    wiki_email_subject = Option('announcer', 'wiki_email_subject', "Wiki ${page.name} changed")
+    wiki_email_subject = Option('announcer', 'wiki_email_subject', "Page: ${page.name} ${action}")
     
     def get_format_transport(self):
         return "email"
@@ -69,7 +69,7 @@ class WikiEmailFormatter(Component):
         if transport == "email":
             if realm == "wiki":
                 template = NewTextTemplate(self.wiki_email_subject)
-                return template.generate(page=event.target, event=event).render()
+                return template.generate(page=event.target, event=event, action=event.category).render()
                 
     def format(self, transport, realm, style, event):
         if transport == "email":
@@ -80,29 +80,36 @@ class WikiEmailFormatter(Component):
                 #     return self._format_html(event)
 
     def _format_plaintext(self, event):
+        page = event.target
         data = dict(
-            page = event.target,
+            action = event.category,
+            page = page,
             author = event.author,
             comment = event.comment,
             category = event.category,
-            page_link = self.env.abs_href('page', event.target.name),
+            page_link = self.env.abs_href('wiki', page.name),
             project_name = self.env.project_name,
             project_desc = self.env.project_description,
             project_link = self.env.project_url,
         )
         
+        if page.version:
+            data["changed"] = True
+            data["diff_link"] = self.env.abs_href('wiki', page.name, action="diff", version=page.version)
+            
+        
         chrome = Chrome(self.env)        
         dirs = []
         for provider in chrome.template_providers:
             dirs += provider.get_templates_dirs()
-
+            
         templates = TemplateLoader(dirs, variable_lookup='lenient')
-
+        
         template = templates.load('wiki_email_plaintext.txt', cls=NewTextTemplate)
-
+        
         if template:
             stream = template.generate(**data)
             output = stream.render('text')
-
+            
         return output
         

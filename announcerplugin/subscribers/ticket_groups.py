@@ -18,8 +18,11 @@ class JoinableGroupSubscriber(Component):
     def get_subscription_realms(self):
         return ('ticket',)
     
-    def get_subscription_categories(self, *args):
-        return ('changed', 'created', 'attachment added')
+    def get_subscription_categories(self, realm):
+        if realm == "ticket":
+            yield 'changed'
+            yield 'created'
+            yield 'attachment added'
     
     def get_subscriptions_for_event(self, event):
         if event.realm == 'ticket':
@@ -30,7 +33,11 @@ class JoinableGroupSubscriber(Component):
                     if chunk.startswith('@'):
                         member = None
                         for member in self._get_membership(chunk[1:]):
-                            self.log.debug("JoinableGroupSubscriber added '%s' because of opt-in to group: %s" % (member[1], chunk[1:]))
+                            self.log.debug(
+                                "JoinableGroupSubscriber added '%s (%s)' because of opt-in to group: %s" % (
+                                    member[1], member[2] and 'authenticated' or 'not authenticated', chunk[1:]
+                                )
+                            )
                             yield member
                         
                         if member is None:
@@ -41,21 +48,28 @@ class JoinableGroupSubscriber(Component):
         cursor = db.cursor()
         
         cursor.execute("""
-            SELECT sid 
+            SELECT sid, authenticated
               FROM session_attribute
-             WHERE authenticated=1
                AND name=%s
                AND value=%s
         """, ('announcer_joinable_group_' + group, "1"))
         
         for result in cursor.fetchall():
-            yield ("email", result[0], None)
+            if result[1] in (1, '1', True):
+                authenticated = True
+            else:
+                authenticated = False
+            yield ("email", result[0], authenticated, None)
 
     def get_announcement_preference_boxes(self, req):
+        if req.authname == "anonymous" and 'email' not in req.session:
+            return
+            
         if self.joinable_groups:
             yield "joinable_groups", "Joinable Groups (Opt-In)"
+            
         return
-
+        
     def render_announcement_preference_box(self, req, panel):
         cfg = self.config
         sess = req.session

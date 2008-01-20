@@ -8,7 +8,7 @@ from announcerplugin.api import IAnnouncementPreferenceProvider
 class SpecifiedEmailResolver(Component):
     implements(IAnnouncementAddressResolver, IAnnouncementPreferenceProvider)
     
-    def get_address_for_name(self, name):
+    def get_address_for_name(self, name, authenticated):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
         
@@ -28,7 +28,8 @@ class SpecifiedEmailResolver(Component):
 
     # IAnnouncementDistributor
     def get_announcement_preference_boxes(self, req):
-        yield "emailaddress", "Announcement Email Address"
+        if req.authname != "anonymous":
+            yield "emailaddress", "Announcement Email Address"
         
     def render_announcement_preference_box(self, req, panel):
         cfg = self.config

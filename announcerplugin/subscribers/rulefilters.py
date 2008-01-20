@@ -136,4 +136,3 @@ class RuleBasedTicketSubscriber(Component):
             rules=rules,
         )
         return "prefs_announcer_rules.html", data 
-        

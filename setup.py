@@ -31,7 +31,7 @@ from setuptools import find_packages, setup
 
 setup(
     name = 'AnnouncerPlugin', 
-    version = '0.1',
+    version = '0.2',
     author = 'Stephen Hansen',
     author_email = 'shansen@advpubtech.com',
     description = 'Customizable notification system',
@@ -46,14 +46,6 @@ setup(
     entry_points = {
         'trac.plugins': [
             'announcerplugin = announcerplugin',
-            # 'announcerplugin.api = announcerplugin.api',
-            # 'announcerplugin.producers = announcerplugin.producers',
-            # 'announcerplugin.producers.ticket = announcerplugin.producers.ticket',
-            # 'announcerplugin.producers.attachment = announcerplugin.producers.attachment',
-            # 'announcerplugin.subscribers = announcerplugin.subscribers',
-            # 'announcerplugin.subscribers.ticket = announcerplugin.subscribers.ticket',
-            # 'announcerplugin.subscribers.ticket_compat = announcerplugin.subscribers.ticket_compat',
-            # 'announcerplugin.pref = announcerplugin.pref'
         ]    
     }
 )

@@ -24,8 +24,7 @@ class AnnouncerPreferences(Component):
         return [resource_dir]
         
     def get_preference_panels(self, req):
-        if req.authname and req.authname != 'anonymous':
-            yield ('announcer', 'Announcements')
+        yield ('announcer', 'Announcements')
         
     def _get_boxes(self, req):
         for pr in self.preference_boxes:

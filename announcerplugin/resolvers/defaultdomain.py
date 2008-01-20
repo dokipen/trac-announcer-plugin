@@ -10,7 +10,7 @@ class DefaultDomainEmailResolver(Component):
     smtp_default_domain = Option('announcer', 'smtp_default_domain', '',
         """Default host/domain to append to address that do not specify one""")
     
-    def get_address_for_name(self, name):
+    def get_address_for_name(self, name, authenticated):
         if self.smtp_default_domain:
             return '%s@%s' % (name, self.smtp_default_domain)
             

@@ -144,7 +144,7 @@
       </py:if>
     </div>
     <py:if test="has_changes">
-      <div class="changetitle" style="font-size: small; margin: 1em;">Changes (by ${author}):</div>
+      <div class="changetitle" style="font-size: small; margin: 1em;">Changes: (by <strong>${author}</strong>)</div>
       <ul>
         <li py:for="change in short_changes" class="changeitem" style="font-size: small;">
           <span class="fieldname" style="font-weight: bold; font-style: italic;">${change}</span> changed 
@@ -166,7 +166,7 @@
       </ul>
     </py:if>
     <py:if test="comment">
-      <div class="commentstitle" style="font-size: small; margin: 1em;">Comments:</div>
+      <div class="commentstitle" style="font-size: small; margin: 1em;">Comments: <span py:if="not has_changes">(by <strong>${author}</strong>)</span></div>
       <div class="comments" style="font-size: small; margin: 0 0 0 2em; font-style: italic;">${comment}</div>
     </py:if>
     <br />

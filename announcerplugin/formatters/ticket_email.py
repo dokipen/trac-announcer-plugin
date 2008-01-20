@@ -30,7 +30,8 @@ def lineup(gen):
 class TicketEmailFormatter(Component):
     implements(IAnnouncementFormatter)
         
-    ticket_email_subject = Option('announcer', 'ticket_email_subject', "Ticket #${ticket.id}: ${ticket['summary']}")
+    ticket_email_subject = Option('announcer', 'ticket_email_subject', 
+        "Ticket #${ticket.id}: ${ticket['summary']} {% if action %}[${action}]{% end %}")
     
     def get_format_transport(self):
         return "email"
@@ -68,8 +69,13 @@ class TicketEmailFormatter(Component):
     def format_subject(self, transport, realm, style, event):
         if transport == "email":
             if realm == "ticket":
+                if event.changes:
+                    if 'status' in event.changes:
+                        action = 'Status -> %s' % (event.target['status'])
+                    else:
+                        action = None
                 template = NewTextTemplate(self.ticket_email_subject)
-                return template.generate(ticket=event.target, event=event).render()
+                return template.generate(ticket=event.target, event=event, action=action).render()
                 
     def format(self, transport, realm, style, event):
         if transport == "email":

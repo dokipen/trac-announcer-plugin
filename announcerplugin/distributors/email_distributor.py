@@ -152,9 +152,9 @@ class EmailDistributor(Component):
             
             messages = {}
 
-            for name, address in recipients:
+            for name, authenticated, address in recipients:
                 if name:
-                    format = self._get_preferred_format(event.realm, name)
+                    format = self._get_preferred_format(event.realm, name, authenticated)
                 else:
                     format = self._get_default_format()
                     
@@ -163,26 +163,28 @@ class EmailDistributor(Component):
                 
                 if name and not address:
                     for resolver in self.resolvers:
-                        address = resolver.get_address_for_name(name)
+                        address = resolver.get_address_for_name(name, authenticated)
                         if address:
-                            self.log.debug("EmailDistributor found the address '%s' for '%s' via: %s" % (
-                                    address, name, resolver.__class__.__name__
+                            self.log.debug("EmailDistributor found the address '%s' for '%s (%s)' via: %s" % (
+                                    address, name, authenticated and 'authenticated' or 'not authenticated', 
+                                    resolver.__class__.__name__
                                 )
                             )
                             break
                             
                 if address:
-                    messages[format].add((name, address))
+                    messages[format].add((name, authenticated, address))
                 else:
-                    self.log.debug("EmailDistributor was unable to find an address for: %s" % name)
+                    self.log.debug("EmailDistributor was unable to find an address for: %s (%s)" % (
+                            name, authenticated and 'authenticated' or 'not authenticated'
+                        )
+                    )
                     
             for format in messages.keys():
                 if messages[format]:
                     self.log.debug(
                         "EmailDistributor is sending event as '%s' to: %s" % (
-                            format, ', '.join(
-                                ('%s <%s>' % (name, address) for name, address in messages[format])
-                            )
+                            format, ', '.join(x[2] for x in messages[format])
                         )
                     )
                     self._do_send(transport, event, format, messages[format], formats[format])
@@ -190,7 +192,7 @@ class EmailDistributor(Component):
     def _get_default_format(self):
         return self.default_email_format
         
-    def _get_preferred_format(self, realm, sid):
+    def _get_preferred_format(self, realm, sid, authenticated):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
         
@@ -198,14 +200,17 @@ class EmailDistributor(Component):
             SELECT value 
               FROM session_attribute
              WHERE sid=%s
-               AND authenticated=1
+               AND authenticated=%s
                AND name=%s
-        """, (sid, 'announcer_email_format_%s' % realm))
+        """, (sid, authenticated, 'announcer_email_format_%s' % realm))
                 
         result = cursor.fetchone()
         if result:
             chosen = result[0]
-            self.log.debug("EmailDistributor determined the preferred format for '%s' is: %s" % (sid, chosen))
+            self.log.debug("EmailDistributor determined the preferred format for '%s (%s)' is: %s" % (
+                    sid, authenticated and 'authenticated' or 'not authenticated', chosen
+                )
+            )
             return chosen
         else:
             return self._get_default_format()
@@ -256,7 +261,7 @@ class EmailDistributor(Component):
         
         start = time.time()
         
-        package = (self.smtp_from, [x[1] for x in recipients if x], rootMessage.as_string() )
+        package = (self.smtp_from, [x[2] for x in recipients if x], rootMessage.as_string() )
         if self.use_threaded_delivery:
             self._deliveryQueue.put(package)
         else:
