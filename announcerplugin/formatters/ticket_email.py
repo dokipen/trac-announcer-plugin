@@ -1,6 +1,6 @@
 from trac.core import Component, implements
 from announcerplugin.api import IAnnouncementFormatter
-from trac.config import Option, IntOption
+from trac.config import Option, IntOption, ListOption
 from genshi.template import NewTextTemplate, MarkupTemplate
 from genshi import HTML
 from trac.web.href import Href
@@ -32,6 +32,8 @@ class TicketEmailFormatter(Component):
         
     ticket_email_subject = Option('announcer', 'ticket_email_subject', 
         "Ticket #${ticket.id}: ${ticket['summary']} {% if action %}[${action}]{% end %}")
+    
+    ticket_email_header_fields = ListOption('announcer', 'ticket_email_header_fields', 'owner, reporter, milestone, priority, severity')
     
     def get_format_transport(self):
         return "email"
@@ -67,13 +69,13 @@ class TicketEmailFormatter(Component):
         )
         
     def format_subject(self, transport, realm, style, event):
+        action = None
         if transport == "email":
             if realm == "ticket":
                 if event.changes:
                     if 'status' in event.changes:
                         action = 'Status -> %s' % (event.target['status'])
-                    else:
-                        action = None
+                        
                 template = NewTextTemplate(self.ticket_email_subject)
                 return template.generate(ticket=event.target, event=event, action=action).render()
                 
@@ -114,6 +116,7 @@ class TicketEmailFormatter(Component):
             ticket = ticket,
             author = event.author,
             comment = event.comment,
+            header = self.ticket_email_header_fields,
             category = event.category,
             ticket_link = self.env.abs_href('ticket', ticket.id),
             project_name = self.env.project_name,
@@ -169,6 +172,7 @@ class TicketEmailFormatter(Component):
         data = dict(
             ticket = ticket,
             author = event.author,
+            header = self.ticket_email_header_fields,
             comment = event.comment,
             category = event.category,
             ticket_link = self.env.abs_href('ticket', ticket.id),

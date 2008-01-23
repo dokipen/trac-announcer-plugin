@@ -1,18 +1,16 @@
 #${ticket.id}: ${ticket['summary']}
 ${ticket['status']} ${ticket['type']}
 ---------------------------------------------------------------------
-Owner: {% choose %}\
-{% when ticket['owner'] %}\
-${ticket['owner']}\
+{% for field in header %}\
+{% choose %}\
+{% when ticket[field] %}\
+${field.capitalize()}: ${ticket[field]}
 {% end %}\
 {% otherwise %}\
-(None)\
+${field.capitalize()}: (None)
 {% end %}\
-{% end %}
-Reporter: ${ticket['reporter']}
-{% if ticket['milestone'] %}Milestone: ${ticket['milestone']} {% end %}
-{% if ticket['priority'] %}Priority: ${ticket['priority']} {% end %}
-{% if ticket['severity'] %}Severity: ${ticket['severity']} {% end %}
+{% end %}\
+{% end %}\
 {% if category == 'created' %}\
 ---------------------------------------------------------------------
 ${ticket['description']}
@@ -38,7 +36,7 @@ ${long_changes[change]}
 {% if attachment %}\
 Attachment:
  * File '${attachment.filename}' added{% if attachment.description %}: ${attachment.description} {% end %}
-{% end %}
+{% end %}\
 {% if comment %}\
 ---------------------------------------------------------------------
 Comment{% if not has_changes %} (by ${author}){% end %}:

@@ -57,7 +57,9 @@ class GeneralWikiSubscriber(Component):
                 options = results.splitlines()
                 
                 sess['announcer_wiki_interests'] = ' '.join(
-                    urllib.quote(x) for x in options
+                    urllib.quote(
+                        x.replace('*', '.*?')
+                    ) for x in options
                 )
                 
         if 'announcer_wiki_interests' in sess:
@@ -67,6 +69,8 @@ class GeneralWikiSubscriber(Component):
             
         return "prefs_announcer_wiki.html", dict(
             wiki_interests = '\n'.join(
-                urllib.unquote(x) for x in interests.split(' ')
+                urllib.unquote(
+                    x.replace('.*?', '*')
+                ) for x in interests.split(' ')
             )
         )
