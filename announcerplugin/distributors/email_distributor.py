@@ -11,6 +11,7 @@ import announcerplugin, trac
 
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
+from email.Utils import formatdate
 import time, Queue, threading, smtplib
 
 class DeliveryThread(threading.Thread):
@@ -243,6 +244,7 @@ class EmailDistributor(Component):
         for key in provided_headers:
             rootMessage['X-Announcement-%s' % key.capitalize()] = str(provided_headers[key])
         
+        rootMessage['Date'] = formatdate()
         rootMessage['Subject'] = subject
         rootMessage['From'] = self.smtp_from
         if to:
