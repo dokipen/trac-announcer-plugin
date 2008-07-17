@@ -167,9 +167,9 @@ class CarbonCopySubscriber(Component):
         
     def get_subscription_categories(self, realm):
         if realm == 'ticket':
-            yield 'changed'
-            yield 'attachment added'
-        return
+            return ('created', 'changed', 'attachment added')
+        else:
+            return tuple()
         
     def get_subscriptions_for_event(self, event):
         if event.realm == 'ticket':

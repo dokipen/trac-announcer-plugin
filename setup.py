@@ -27,6 +27,8 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 # ----------------------------------------------------------------------------
 
+# Maintained by doki_pen <doki_pen@doki-pen.org>
+
 from setuptools import find_packages, setup
 
 setup(
