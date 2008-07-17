@@ -279,7 +279,8 @@ class EmailDistributor(Component):
     def _transmit(self, smtpfrom, addresses, message):
         smtp = smtplib.SMTP()
         smtp.connect(self.smtp_server)
-        smtp.login(self.smtp_user, self.smtp_password)
+        if self.smtp_user:
+            smtp.login(self.smtp_user, self.smtp_password)
         smtp.sendmail(smtpfrom, addresses, message)
         smtp.quit()
         
