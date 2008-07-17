@@ -38,7 +38,7 @@ class RuleBasedTicketSubscriber(Component):
                 print False
         
         return
-        yield
+        # yield
         # db = self.env.get_db_cnx()
         # cursor = db.cursor()
         # 
