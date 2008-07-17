@@ -1,6 +1,7 @@
 from trac.core import *
 from trac.util.compat import set
 from trac.db import Table, Column, Index
+from trac.db import DatabaseManager
 from trac.env import IEnvironmentSetupParticipant
 import time
 
@@ -304,7 +305,6 @@ class AnnouncementSystem(Component):
 
     def _upgrade_db(self, db):
         try:
-            from trac.db import DatabaseManager
             db_backend, _ = DatabaseManager(self.env)._get_connector()            
 
             cursor = db.cursor()
