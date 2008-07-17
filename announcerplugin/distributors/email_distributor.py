@@ -105,6 +105,7 @@ class EmailDistributor(Component):
         If the setting is not defined, then the [$project_name] prefix.
         If no prefix is desired, then specifying an empty option 
         will disable it.(''since 0.10.1'').""")
+    smtp_to = Option('announcer', 'smtp_to', None, 'Default To: field')
     
     use_threaded_delivery = BoolOption('announcer', 'use_threaded_delivery', False, 
     """If true, the actual delivery of the message will occur in a separate thread.
@@ -127,6 +128,8 @@ class EmailDistributor(Component):
         return "email"
         
     def distribute(self, transport, recipients, event):
+        public_cc = self.config.getbool('announcer', 'use_public_cc')
+        to = self.config.get('announcer', 'smtp_to')
         if transport == self.get_distribution_transport():
             formats = {}
             
@@ -187,7 +190,7 @@ class EmailDistributor(Component):
                             format, ', '.join(x[2] for x in messages[format])
                         )
                     )
-                    self._do_send(transport, event, format, messages[format], formats[format])
+                    self._do_send(transport, event, format, messages[format], formats[format], None, to, public_cc)
                     
     def _get_default_format(self):
         return self.default_email_format
@@ -215,7 +218,7 @@ class EmailDistributor(Component):
         else:
             return self._get_default_format()
             
-    def _do_send(self, transport, event, format, recipients, formatter, backup=None):
+    def _do_send(self, transport, event, format, recipients, formatter, backup=None, to=None, public_cc=False):
         output = formatter.format(transport, event.realm, format, event)
         subject = formatter.format_subject(transport, event.realm, format, event)
         
@@ -242,7 +245,10 @@ class EmailDistributor(Component):
         
         rootMessage['Subject'] = subject
         rootMessage['From'] = self.smtp_from
-        rootMessage['To'] = self.env.project_name
+        if to:
+            rootMessage['To'] = '"%s"'%(to)
+        if public_cc:
+            rootMessage['Cc'] = ', '.join([x[2] for x in recipients if x])
         rootMessage['Reply-To'] = self.smtp_replyto
         rootMessage.preamble = 'This is a multi-part message in MIME format.'
         
