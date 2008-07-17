@@ -182,20 +182,9 @@ class TicketEmailFormatter(Component):
             has_changes = short_changes or long_changes,
             long_changes = long_changes,
             short_changes = short_changes,
-            attachment= event.attachment
+            attachment= event.attachment            
         )
         
-        chrome = Chrome(self.env)
-        dirs = []
-        for provider in chrome.template_providers:
-            dirs += provider.get_templates_dirs()
+        output = chrome.render_template(None, "ticket_email_mimic.html", data, content_type="text/html", fragment = True)
         
-        templates = TemplateLoader(dirs, variable_lookup='lenient')
-        
-        template = templates.load('ticket_email_mimic.html', cls=MarkupTemplate)
-        
-        if template:
-            stream = template.generate(**data)
-            output = stream.render()
-        
-        return output
+        return output.render()
