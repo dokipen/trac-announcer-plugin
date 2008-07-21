@@ -340,8 +340,9 @@ class AnnouncementSystem(Component):
             supported_subscribers = []
             for sp in self.subscribers:
                 categories = sp.get_subscription_categories(evt.realm)
-                if ('*' in categories) or (evt.category in categories):
-                    supported_subscribers.append(sp)
+                if categories:
+                    if ('*' in categories) or (evt.category in categories):
+                        supported_subscribers.append(sp)
             
             self.log.debug(
                 "AnnouncementSystem found the following subscribers capable of "
