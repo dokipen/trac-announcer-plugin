@@ -20,9 +20,9 @@ class JoinableGroupSubscriber(Component):
     
     def get_subscription_categories(self, realm):
         if realm == "ticket":
-            yield 'changed'
-            yield 'created'
-            yield 'attachment added'
+            return('changed', 'created', 'attachment added')
+        else:
+            ()
     
     def get_subscriptions_for_event(self, event):
         if event.realm == 'ticket':
@@ -49,8 +49,8 @@ class JoinableGroupSubscriber(Component):
         
         cursor.execute("""
             SELECT sid, authenticated
-              FROM session_attribute
-               AND name=%s
+              FROM session_attribute 
+             WHERE name=%s
                AND value=%s
         """, ('announcer_joinable_group_' + group, "1"))
         

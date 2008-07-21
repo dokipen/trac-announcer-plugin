@@ -220,6 +220,7 @@ class EmailDistributor(Component):
             return self._get_default_format()
             
     def _do_send(self, transport, event, format, recipients, formatter, backup=None, to=None, public_cc=False):
+        self.log.error("transport = %s, event.realm = %s, format = %s, event = %s"%(transport, event.realm, format, event))
         output = formatter.format(transport, event.realm, format, event)
         subject = formatter.format_subject(transport, event.realm, format, event)
         
