@@ -206,7 +206,7 @@ class EmailDistributor(Component):
              WHERE sid=%s
                AND authenticated=%s
                AND name=%s
-        """, (sid, authenticated, 'announcer_email_format_%s' % realm))
+        """, (sid, int(authenticated), 'announcer_email_format_%s' % realm))
                 
         result = cursor.fetchone()
         if result:
