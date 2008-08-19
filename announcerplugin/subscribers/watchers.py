@@ -76,7 +76,7 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, authenticated and 1 or 0, 'watcher', realm, '*', resource))
+        """, (sid, int(authenticated), 'watcher', realm, '*', str(resource)))
         
         result = cursor.fetchone()
         if result:
@@ -102,7 +102,7 @@ class WatchSubscriber(Component):
                          %s, %s,
                          %s, %s)
         """, (
-                sid, authenticated, 
+                sid, int(authenticated), 
                 'watcher', realm, '*', 
                 resource, 'email'
             )
@@ -126,7 +126,7 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, authenticated, 'watcher', realm, '*', resource))
+        """, (sid, int(authenticated), 'watcher', realm, '*', str(resource)))
         
         if not use_db:
             db.commit()
@@ -197,7 +197,7 @@ class WatchSubscriber(Component):
              WHERE managed=%s
                AND realm=%s
                AND rule=%s
-        """, ('watcher', 'wiki', page.name))
+        """, ('watcher', 'wiki', str(page.name)))
 
         db.commit()
 
@@ -223,7 +223,7 @@ class WatchSubscriber(Component):
              WHERE managed=%s
                AND realm=%s
                AND rule=%s
-        """, ('watcher', 'ticket', ticket.id))
+        """, ('watcher', 'ticket', str(ticket.id)))
 
         db.commit()
     
@@ -248,7 +248,9 @@ class WatchSubscriber(Component):
                        AND realm=%s
                        AND category=%s
                        AND rule=%s
-                """, ('watcher', event.realm, '*', self._get_target_identifier(event.realm, event.target)))
+                """, ('watcher', event.realm, '*', 
+                    self._get_target_identifier(event.realm, 
+                    str(event.target))))
             
                 for transport, sid, authenticated in cursor.fetchall():
                     self.log.debug("WatchSubscriber added '%s (%s)' because of rule: watched" % (

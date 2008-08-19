@@ -12,6 +12,7 @@ import announcerplugin, trac
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from email.Utils import formatdate
+from email.header import Header
 import time, Queue, threading, smtplib
 
 class DeliveryThread(threading.Thread):
@@ -223,6 +224,7 @@ class EmailDistributor(Component):
         output = formatter.format(transport, event.realm, format, event)
         subject = formatter.format_subject(transport, event.realm, format, event)
         
+        charset = self.env.config.get('trac', 'default_charset') or 'utf-8'
         alternate_format = formatter.get_format_alternative(transport, event.realm, format)
         if alternate_format:
             alternate_output = formatter.format(transport, event.realm, alternate_format, event)
@@ -245,7 +247,7 @@ class EmailDistributor(Component):
             rootMessage['X-Announcement-%s' % key.capitalize()] = str(provided_headers[key])
         
         rootMessage['Date'] = formatdate()
-        rootMessage['Subject'] = subject
+        rootMessage['Subject'] = Header(subject, charset) 
         rootMessage['From'] = self.smtp_from
         if to:
             rootMessage['To'] = '"%s"'%(to)
@@ -261,10 +263,10 @@ class EmailDistributor(Component):
             parentMessage = rootMessage
         
         if alternate_output:
-            msgText = MIMEText(alternate_output, 'html' in alternate_format and 'html' or 'plain')
+            msgText = MIMEText(alternate_output, 'html' in alternate_format and 'html' or 'plain', charset)
             parentMessage.attach(msgText)
         
-        msgText = MIMEText(output, 'html' in format and 'html' or 'plain')
+        msgText = MIMEText(output, 'html' in format and 'html' or 'plain', charset)
         parentMessage.attach(msgText)
         
         start = time.time()
