@@ -286,6 +286,7 @@ class EmailDistributor(Component):
         if self.use_tls:
             smtp.ehlo()
             smtp.starttls()
+            smtp.ehlo()
         if self.smtp_user:
             smtp.login(self.smtp_user, self.smtp_password)
         smtp.sendmail(smtpfrom, addresses, message)
