@@ -173,7 +173,7 @@ class CarbonCopySubscriber(Component):
         
     def get_subscriptions_for_event(self, event):
         if event.realm == 'ticket':
-            if event.category in ('changed', 'attachment added'):
+            if event.category in ('created', 'changed', 'attachment added'):
                 cc = event.target['cc']
                 for chunk in re.split('\s|,', cc):
                     chunk = chunk.strip()
