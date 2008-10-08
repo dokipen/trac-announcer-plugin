@@ -4,6 +4,7 @@ from trac.ticket import model
 from trac.web.chrome import add_warning
 from trac.config import BoolOption
 import re
+from trac.resource import ResourceNotFound
 
 class StaticTicketSubscriber(Component):
     """The static ticket subscriber implements a policy to -always- send an email to a
@@ -98,12 +99,16 @@ class LegacyTicketSubscriber(Component):
             ticket = event.target
             
             if event.category in ('created', 'changed', 'attachment added'):
-                component = model.Component(self.env, ticket['component'])
-                if component.owner:
-                    ## TODO: Is this an option?
-                    self.log.debug("LegacyTicketSubscriber added '%s' because of rule: component owner" % (component.owner,))
-                    yield ('email', component.owner, True, None)
-                    
+                try:
+                    # this throws an exception if the component does not exist
+                    component = model.Component(self.env, ticket['component'])
+                    if component.owner:
+                        ## TODO: Is this an option?
+                        self.log.debug("LegacyTicketSubscriber added '%s' because of rule: component owner" % (component.owner,))
+                        yield ('email', component.owner, True, None)
+                except ResourceNotFound, message:
+                    self.log.warn("LegacyTicketSubscriber couldn't add component owner because component was not found, message: '%s'" % (message,))    
+
                 if self.always_notify_owner and ticket['owner'] and not self._check_opt_out('notify_owner', ticket['owner']):                   
                     owner = ticket['owner']
                     if '@' in owner:
