@@ -263,10 +263,10 @@ class EmailDistributor(Component):
             parentMessage = rootMessage
         
         if alternate_output:
-            msgText = MIMEText(alternate_output, 'html' in alternate_format and 'html' or 'plain', charset)
+            msgText = MIMEText(alternate_output, 'html' in alternate_format and 'html' or 'plain', str(charset))
             parentMessage.attach(msgText)
         
-        msgText = MIMEText(output, 'html' in format and 'html' or 'plain', charset)
+        msgText = MIMEText(output, 'html' in format and 'html' or 'plain', str(charset))
         parentMessage.attach(msgText)
         
         start = time.time()
