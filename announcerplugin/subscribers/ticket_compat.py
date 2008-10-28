@@ -48,6 +48,11 @@ class LegacyTicketSubscriber(Component):
         """The always_notify_updater option mimics the option of the same name in the
         notification section, except users can opt-out in their preferences. Used
         only if LegacyTicketSubscriber is enabled.""")
+
+    always_notify_component_owner = BoolOption("announcer", 
+            "always_notify_component_owner", True,
+            """Whether or not to notify the owner of the ticket's 
+            component.""")
         
     def get_announcement_preference_boxes(self, req):
         yield "legacy", "Legacy Notification (Opt-Out)"
@@ -99,15 +104,16 @@ class LegacyTicketSubscriber(Component):
             ticket = event.target
             
             if event.category in ('created', 'changed', 'attachment added'):
-                try:
-                    # this throws an exception if the component does not exist
-                    component = model.Component(self.env, ticket['component'])
-                    if component.owner:
-                        ## TODO: Is this an option?
-                        self.log.debug("LegacyTicketSubscriber added '%s' because of rule: component owner" % (component.owner,))
-                        yield ('email', component.owner, True, None)
-                except ResourceNotFound, message:
-                    self.log.warn("LegacyTicketSubscriber couldn't add component owner because component was not found, message: '%s'" % (message,))    
+                if self.always_notify_component_owner:
+                    try:
+                        # this throws an exception if the component does not exist
+                        component = model.Component(self.env, ticket['component'])
+                        if component.owner:
+                            ## TODO: Is this an option?
+                            self.log.debug("LegacyTicketSubscriber added '%s' because of rule: component owner" % (component.owner,))
+                            yield ('email', component.owner, True, None)
+                    except ResourceNotFound, message:
+                        self.log.warn("LegacyTicketSubscriber couldn't add component owner because component was not found, message: '%s'" % (message,))    
 
                 if self.always_notify_owner and ticket['owner'] and not self._check_opt_out('notify_owner', ticket['owner']):                   
                     owner = ticket['owner']
