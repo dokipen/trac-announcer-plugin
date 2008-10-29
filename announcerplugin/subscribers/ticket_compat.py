@@ -109,7 +109,6 @@ class LegacyTicketSubscriber(Component):
                         # this throws an exception if the component does not exist
                         component = model.Component(self.env, ticket['component'])
                         if component.owner:
-                            ## TODO: Is this an option?
                             self.log.debug("LegacyTicketSubscriber added '%s' because of rule: component owner" % (component.owner,))
                             yield ('email', component.owner, True, None)
                     except ResourceNotFound, message:
