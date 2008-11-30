@@ -133,6 +133,8 @@ class EmailDistributor(Component):
         return "email"
         
     def distribute(self, transport, recipients, event):
+        if not self.config.getbool('announcer', 'smtp_enabled'):
+            return
         public_cc = self.config.getbool('announcer', 'use_public_cc')
         to = self.config.get('announcer', 'smtp_to')
         if transport == self.get_distribution_transport():
