@@ -73,11 +73,11 @@ class LegacyTicketSubscriber(Component):
 
         if req.method == "POST":
             if always_notify_owner:
-                sess['announcer_legacy_notify_owner'] = req.args.get('legacy_notify_owner', False)
+                sess['announcer_legacy_notify_owner'] = unicode(req.args.get('legacy_notify_owner', False))
             if always_notify_reporter:
-                sess['announcer_legacy_notify_reporter'] = req.args.get('legacy_notify_reporter', False)
+                sess['announcer_legacy_notify_reporter'] = unicode(req.args.get('legacy_notify_reporter', False))
             if always_notify_updater:
-                sess['announcer_legacy_notify_updater'] = req.args.get('legacy_notify_updater', False)
+                sess['announcer_legacy_notify_updater'] = unicode(req.args.get('legacy_notify_updater', False))
         
         data = dict(
             always_notify_owner = always_notify_owner,
