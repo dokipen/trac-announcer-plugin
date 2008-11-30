@@ -92,8 +92,10 @@ class TicketEmailFormatter(Component):
         short_changes = {}
         long_changes = {}
         
-        for field, old_value in event.changes.items():
-            new_value = ticket[field]
+        changed_items = [(field, unicode(old_value)) for field, old_value in 
+            event.changes.items()]
+        for field, old_value in changed_items:
+            new_value = unicode(ticket[field])
             if ('\n' in new_value) or ('\n' in old_value):
                 # long_changes[field.capitalize()] = \
                 # '\n'.join(

@@ -76,7 +76,7 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, int(authenticated), 'watcher', realm, '*', str(resource)))
+        """, (sid, int(authenticated), 'watcher', realm, '*', unicode(resource)))
         
         result = cursor.fetchone()
         if result:
@@ -126,7 +126,7 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, int(authenticated), 'watcher', realm, '*', str(resource)))
+        """, (sid, int(authenticated), 'watcher', realm, '*', unicode(resource)))
         
         if not use_db:
             db.commit()
@@ -197,7 +197,7 @@ class WatchSubscriber(Component):
              WHERE managed=%s
                AND realm=%s
                AND rule=%s
-        """, ('watcher', 'wiki', str(page.name)))
+        """, ('watcher', 'wiki', unicode(page.name)))
 
         db.commit()
 
@@ -223,7 +223,7 @@ class WatchSubscriber(Component):
              WHERE managed=%s
                AND realm=%s
                AND rule=%s
-        """, ('watcher', 'ticket', str(ticket.id)))
+        """, ('watcher', 'ticket', unicode(ticket.id)))
 
         db.commit()
     
@@ -249,7 +249,7 @@ class WatchSubscriber(Component):
                        AND category=%s
                        AND rule=%s
                 """, ('watcher', event.realm, '*', 
-                    str(self._get_target_identifier(event.realm, 
+                    unicode(self._get_target_identifier(event.realm, 
                     event.target))))
             
                 for transport, sid, authenticated in cursor.fetchall():
