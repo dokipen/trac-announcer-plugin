@@ -312,6 +312,7 @@ class AnnouncementSystem(Component):
                 for stmt in db_backend.to_sql(table):
                     self.log.debug(stmt)
                     cursor.execute(stmt)
+                    db.commit()
 
         except Exception, e:
             db.rollback()
