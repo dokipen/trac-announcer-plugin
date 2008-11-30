@@ -12,7 +12,10 @@ import announcerplugin, trac
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 from email.Utils import formatdate
-from email.header import Header
+try:
+    from email.header import Header
+except:
+    from email.Header import Header
 import time, Queue, threading, smtplib
 
 class DeliveryThread(threading.Thread):
