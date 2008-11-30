@@ -55,7 +55,7 @@ class LegacyTicketSubscriber(Component):
             component.""")
         
     def get_announcement_preference_boxes(self, req):
-        yield "legacy", "Legacy Notification (Opt-Out)"
+        yield "legacy", "Ticket Notifications"
 
     def render_announcement_preference_box(self, req, panel):
         cfg = self.config
