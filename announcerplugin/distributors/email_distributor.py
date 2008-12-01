@@ -286,10 +286,12 @@ class EmailDistributor(Component):
         self.log.debug("EmailDistributor took %s seconds to send." % (round(stop-start,2)))
 
     def _transmit(self, smtpfrom, addresses, message):
-        smtp = smtplib.SMTP()
-        smtp.connect(self.smtp_server)
+        smtp = smtplib.SMTP(self.smtp_server, self.smtp_port)
         if self.use_tls:
             smtp.ehlo()
+            if not smtp.esmtp_features.has_key('starttls'):
+                raise TracError(_("TLS enabled but server does not support " \
+                        "TLS"))
             smtp.starttls()
             smtp.ehlo()
         if self.smtp_user:
