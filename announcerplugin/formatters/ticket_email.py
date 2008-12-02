@@ -123,7 +123,7 @@ class TicketEmailFormatter(Component):
             ticket_link = self.env.abs_href('ticket', ticket.id),
             project_name = self.env.project_name,
             project_desc = self.env.project_description,
-            project_link = self.env.project_url,
+            project_link = self.env.project_url or self.env.abs_href(),
             has_changes = short_changes or long_changes,
             long_changes = long_changes,
             short_changes = short_changes,
