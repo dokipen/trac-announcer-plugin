@@ -6,6 +6,7 @@ from trac.web.chrome import add_warning
 from trac.config import BoolOption
 import re
 from trac.resource import ResourceNotFound
+from trac.util.text import to_unicode
 
 class StaticTicketSubscriber(Component):
     """The static ticket subscriber implements a policy to -always- send an 
@@ -73,13 +74,13 @@ class LegacyTicketSubscriber(Component):
         )
         if req.method == "POST":
             if always_notify_owner:
-                sess['announcer_legacy_notify_owner'] = unicode(
+                sess['announcer_legacy_notify_owner'] = to_unicode(
                         req.args.get('legacy_notify_owner', 0))
             if always_notify_reporter:
-                sess['announcer_legacy_notify_reporter'] = unicode(
+                sess['announcer_legacy_notify_reporter'] = to_unicode(
                         req.args.get('legacy_notify_reporter', 0))
             if always_notify_updater:
-                sess['announcer_legacy_notify_updater'] = unicode(
+                sess['announcer_legacy_notify_updater'] = to_unicode(
                         req.args.get('legacy_notify_updater', 0))
         data = dict(
             always_notify_owner = always_notify_owner,

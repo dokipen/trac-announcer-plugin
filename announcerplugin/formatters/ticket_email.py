@@ -6,7 +6,7 @@ from genshi import HTML
 from trac.web.href import Href
 from trac.web.chrome import Chrome
 from genshi.template import TemplateLoader
-from trac.util.text import wrap
+from trac.util.text import wrap, to_unicode
 from trac.versioncontrol.diff import diff_blocks
 import difflib
 
@@ -92,10 +92,10 @@ class TicketEmailFormatter(Component):
         short_changes = {}
         long_changes = {}
         
-        changed_items = [(field, unicode(old_value)) for field, old_value in 
-            event.changes.items()]
+        changed_items = [(field, to_unicode(old_value)) for \
+                field, old_value in event.changes.items()]
         for field, old_value in changed_items:
-            new_value = unicode(ticket[field])
+            new_value = to_unicode(ticket[field])
             if ('\n' in new_value) or ('\n' in old_value):
                 # long_changes[field.capitalize()] = \
                 # '\n'.join(

@@ -7,6 +7,7 @@ from trac.web.chrome import ITemplateProvider, add_ctxtnav, add_stylesheet, \
 from trac.resource import get_resource_url
 from trac.ticket.api import ITicketChangeListener
 from trac.wiki.api import IWikiChangeListener
+from trac.util.text import to_unicode
 from genshi.builder import tag
 from announcerplugin.api import IAnnouncementSubscriber
 
@@ -76,7 +77,7 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, int(authenticated), 'watcher', realm, '*', unicode(resource)))
+        """, (sid, int(authenticated), 'watcher', realm, '*', to_unicode(resource)))
         
         result = cursor.fetchone()
         if result:
@@ -126,7 +127,7 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, int(authenticated), 'watcher', realm, '*', unicode(resource)))
+        """, (sid, int(authenticated), 'watcher', realm, '*', to_unicode(resource)))
         
         if not use_db:
             db.commit()
@@ -197,7 +198,7 @@ class WatchSubscriber(Component):
              WHERE managed=%s
                AND realm=%s
                AND rule=%s
-        """, ('watcher', 'wiki', unicode(page.name)))
+        """, ('watcher', 'wiki', to_unicode(page.name)))
 
         db.commit()
 
@@ -223,7 +224,7 @@ class WatchSubscriber(Component):
              WHERE managed=%s
                AND realm=%s
                AND rule=%s
-        """, ('watcher', 'ticket', unicode(ticket.id)))
+        """, ('watcher', 'ticket', to_unicode(ticket.id)))
 
         db.commit()
     
@@ -249,7 +250,7 @@ class WatchSubscriber(Component):
                        AND category=%s
                        AND rule=%s
                 """, ('watcher', event.realm, '*', 
-                    unicode(self._get_target_identifier(event.realm, 
+                    to_unicode(self._get_target_identifier(event.realm, 
                     event.target))))
             
                 for transport, sid, authenticated in cursor.fetchall():
