@@ -121,12 +121,17 @@ class EmailDistributor(Component):
     'import threading' to see if it raises an error.""")
     
     default_email_format = Option('announcer', 'default_email_format', 'text/plain')
-    
+
     def __init__(self):
-        if self.use_threaded_delivery:
-            self._deliveryQueue = Queue.Queue()
-            thread = DeliveryThread(self._deliveryQueue, self._transmit)
+        self.delivery_queue = None
+
+    def get_delivery_queue(self):
+        if not self.delivery_queue:
+            self.delivery_queue = Queue.Queue()
+            thread = DeliveryThread(self.delivery_queue, self._transmit)
             thread.start()
+
+        return self.delivery_queue
     
     # IAnnouncementDistributor
     def get_distribution_transport(self):
@@ -278,7 +283,7 @@ class EmailDistributor(Component):
         
         package = (self.smtp_from, [x[2] for x in recipients if x], rootMessage.as_string() )
         if self.use_threaded_delivery:
-            self._deliveryQueue.put(package)
+            self.get_delivery_queue().put(package)
         else:
             self._transmit(*package)
 
