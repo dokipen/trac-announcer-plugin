@@ -2,6 +2,8 @@ from trac.core import Component, implements, ExtensionPoint
 from trac.util.compat import set, sorted
 from trac.config import Option, BoolOption, IntOption, OrderedExtensionsOption
 from trac.util import get_pkginfo
+from trac.util.translation import _
+
 from announcerplugin.api import IAnnouncementDistributor
 from announcerplugin.api import IAnnouncementFormatter
 from announcerplugin.api import IAnnouncementPreferenceProvider
