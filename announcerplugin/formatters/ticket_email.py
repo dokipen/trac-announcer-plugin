@@ -153,7 +153,7 @@ class TicketEmailFormatter(Component):
         
         for field, old_value in event.changes.items():
             new_value = ticket[field]
-            if ('\n' in new_value) or ('\n' in old_value):
+            if (new_value and '\n' in new_value) or (old_value and '\n' in old_value):
                 long_changes[field.capitalize()] = HTML(
                     "<pre>\n%s\n</pre>" % (
                         '\n'.join(

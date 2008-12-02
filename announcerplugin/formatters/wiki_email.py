@@ -90,7 +90,7 @@ class WikiEmailFormatter(Component):
             page_link = self.env.abs_href('wiki', page.name),
             project_name = self.env.project_name,
             project_desc = self.env.project_description,
-            project_link = self.env.project_url,
+            project_link = self.env.project_url or self.env.abs_href(),
         )
         
         if page.version:
