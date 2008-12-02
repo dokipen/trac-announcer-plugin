@@ -262,7 +262,6 @@ class EmailDistributor(Component):
     def _do_send(self, transport, event, format, recipients, formatter, 
             backup=None, to=None, public_cc=False):
         output = formatter.format(transport, event.realm, format, event)
-        self.log.error(output)
         subject = formatter.format_subject(transport, event.realm, format, 
                 event)
         charset = self.env.config.get('trac', 'default_charset', 'utf-8')
