@@ -126,6 +126,7 @@ class EmailDistributor(Component):
 
     def __init__(self):
         self.delivery_queue = None
+        self._init_pref_encoding()
 
     def get_delivery_queue(self):
         if not self.delivery_queue:
@@ -231,35 +232,73 @@ class EmailDistributor(Component):
             return chosen
         else:
             return self._get_default_format()
-            
-    def _do_send(self, transport, event, format, recipients, formatter, backup=None, to=None, public_cc=False):
+
+    def _init_pref_encoding(self):
+        from email.Charset import Charset, QP, BASE64
+        self._charset = Charset()
+        self._charset.input_charset = 'utf-8'
+        pref = self.env.config.get('announcer', 'mime_encoding').lower()
+        if pref == 'base64':
+            self._charset.header_encoding = BASE64
+            self._charset.body_encoding = BASE64
+            self._charset.output_charset = 'utf-8'
+            self._charset.input_codec = 'utf-8'
+            self._charset.output_codec = 'utf-8'
+        elif pref in ['qp', 'quoted-printable']:
+            self._charset.header_encoding = QP
+            self._charset.body_encoding = QP
+            self._charset.output_charset = 'utf-8'
+            self._charset.input_codec = 'utf-8'
+            self._charset.output_codec = 'utf-8'
+        elif pref == 'none':
+            self._charset.header_encoding = None
+            self._charset.body_encoding = None
+            self._charset.input_codec = None
+            self._charset.output_charset = 'ascii'
+        else:
+            raise TracError(_('Invalid email encoding setting: %s' % pref))
+
+    def _do_send(self, transport, event, format, recipients, formatter, 
+            backup=None, to=None, public_cc=False):
         output = formatter.format(transport, event.realm, format, event)
-        subject = formatter.format_subject(transport, event.realm, format, event)
-        
+        self.log.error(output)
+        subject = formatter.format_subject(transport, event.realm, format, 
+                event)
         charset = self.env.config.get('trac', 'default_charset', 'utf-8')
-        alternate_format = formatter.get_format_alternative(transport, event.realm, format)
+        alternate_format = formatter.get_format_alternative(transport, 
+                event.realm, format)
         if alternate_format:
-            alternate_output = formatter.format(transport, event.realm, alternate_format, event)
+            alternate_output = formatter.format(transport, event.realm, 
+                    alternate_format, event)
         else:
             alternate_output = None
-            
         rootMessage = MIMEMultipart("related")
         trac_version = get_pkginfo(trac.core).get('version', trac.__version__)
-        announcer_version = get_pkginfo(announcerplugin).get('version', 'Undefined')
-        
-        rootMessage['X-Mailer'] = 'AnnouncerPlugin v%s on Trac v%s' % (announcer_version, trac_version)
+        announcer_version = get_pkginfo(announcerplugin).get('version', 
+                'Undefined')
+        rootMessage['X-Mailer'] = 'AnnouncerPlugin v%s on Trac ' \
+                'v%s'%(announcer_version, trac_version)
         rootMessage['X-Trac-Version'] = trac_version
         rootMessage['X-Announcer-Version'] = announcer_version
         rootMessage['X-Trac-Project'] = self.env.project_name
         rootMessage['Precedence'] = 'bulk'
         rootMessage['Auto-Submitted'] = 'auto-generated'
-        
-        provided_headers = formatter.format_headers(transport, event.realm, format, event)
+        provided_headers = formatter.format_headers(transport, event.realm, 
+                format, event)
         for key in provided_headers:
-            rootMessage['X-Announcement-%s' % key.capitalize()] = str(provided_headers[key])
-        
+            rootMessage['X-Announcement-%s'%key.capitalize()] = \
+                    to_unicode(provided_headers[key])
         rootMessage['Date'] = formatdate()
-        rootMessage['Subject'] = Header(subject, charset) 
+        # sanity check
+        if not self._charset.body_encoding:
+            try:
+                dummy = body.encode('ascii')
+            except UnicodeDecodeError:
+                raise TracError(_("Ticket contains non-ASCII chars. " \
+                                  "Please change encoding setting"))
+        del rootMessage['Content-Transfer-Encoding']
+        rootMessage.set_charset(self._charset)
+        rootMessage['Subject'] = Header(subject, self._charset) 
         rootMessage['From'] = self.smtp_from
         if to:
             rootMessage['To'] = '"%s"'%(to)
@@ -267,18 +306,17 @@ class EmailDistributor(Component):
             rootMessage['Cc'] = ', '.join([x[2] for x in recipients if x])
         rootMessage['Reply-To'] = self.smtp_replyto
         rootMessage.preamble = 'This is a multi-part message in MIME format.'
-        
         if alternate_output:
             parentMessage = MIMEMultipart('alternative')
             rootMessage.attach(parentMessage)
         else:
             parentMessage = rootMessage
-        
         if alternate_output:
-            msgText = MIMEText(alternate_output, 'html' in alternate_format and 'html' or 'plain', str(charset))
+            alt_msg_format = 'html' in alternate_format and 'html' or 'plain'
+            msgText = MIMEText(alternate_output, alt_msg_format)
             parentMessage.attach(msgText)
-        
-        msgText = MIMEText(output, 'html' in format and 'html' or 'plain', str(charset))
+        msg_format = 'html' in format and 'html' or 'plain'
+        msgText = MIMEText(output, msg_format)
         parentMessage.attach(msgText)
         
         start = time.time()
