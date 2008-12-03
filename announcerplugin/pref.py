@@ -37,20 +37,12 @@ class AnnouncerPreferences(Component):
 
     def render_preference_panel(self, req, panel, path_info=None):
         streams = []
-        
         chrome = Chrome(self.env)
         for name, label, template, data in self._get_boxes(req):
-            streams.append(
-                (label, 
-                    chrome.render_template(
-                        req, template, data, 
-                        content_type='text/html', fragment=True
-                    )
-                )
-            )
-            
+            streams.append((label, chrome.render_template(
+                req, template, data, content_type='text/html', fragment=True
+            )))
         add_stylesheet(req, 'announcer/css/announcer_prefs.css')
-        
         return 'prefs_announcer.html', {"boxes": streams}
         
         
