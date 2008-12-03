@@ -291,7 +291,6 @@ class AnnouncementSystem(Component):
 
     def environment_needs_upgrade(self, db):
         cursor = db.cursor()
-
         try:
             cursor.execute("select count(*) from subscriptions")
             cursor.fetchone()
@@ -306,26 +305,24 @@ class AnnouncementSystem(Component):
     def _upgrade_db(self, db):
         try:
             db_backend, _ = DatabaseManager(self.env)._get_connector()            
-
             cursor = db.cursor()
             for table in self.SCHEMA:
                 for stmt in db_backend.to_sql(table):
                     self.log.debug(stmt)
                     cursor.execute(stmt)
                     db.commit()
-
         except Exception, e:
             db.rollback()
             self.log.error(e, exc_info=True)
             raise TracError(str(e))
-            
     # The actual AnnouncementSystem now..    
 
     def send(self, evt):
         start = time.time()
         self._real_send(evt)
         stop = time.time()
-        self.log.debug("AnnouncementSystem sent event in %s seconds." % (round(stop-start,2)))
+        self.log.debug("AnnouncementSystem sent event in %s seconds."\
+                %(round(stop-start,2)))
 
     def _real_send(self, evt):
         """Accepts a single AnnouncementEvent instance (or subclass), and
@@ -335,43 +332,37 @@ class AnnouncementSystem(Component):
         AnnouncementSystem did with a particular event besides looking through
         the debug logs.
         """
-        
         try:
-        
             supported_subscribers = []
             for sp in self.subscribers:
                 categories = sp.get_subscription_categories(evt.realm)
                 if categories:
                     if ('*' in categories) or (evt.category in categories):
                         supported_subscribers.append(sp)
-            
             self.log.debug(
-                "AnnouncementSystem found the following subscribers capable of "
-                "handling '%s, %s': %s" % (evt.realm, evt.category, 
-                ', '.join([ss.__class__.__name__ for ss in supported_subscribers]))
+                "AnnouncementSystem found the following subscribers capable of"
+                " handling '%s, %s': %s" % (evt.realm, evt.category, 
+                ', '.join([ss.__class__.__name__ for ss in \
+                        supported_subscribers]))
             )
-            
             subscriptions = set()
             for sp in supported_subscribers:
                 subscriptions.update(
                     x for x in sp.get_subscriptions_for_event(evt) if x
                 )
-            
             self.log.debug(
-                "AnnouncementSystem has found the following subscriptions: %s" % (
-                    ', '.join(
-                        ['[%s(%s) via %s]' % ((s[1] or s[3]), s[2] and 'authenticated' or 'not authenticated',s[0]) for s in subscriptions]
+                "AnnouncementSystem has found the following subscriptions: " \
+                        "%s"%(', '.join(['[%s(%s) via %s]' % ((s[1] or s[3]),\
+                        s[2] and 'authenticated' or 'not authenticated',s[0])\
+                        for s in subscriptions]
                     )
                 )
             )
-            
             packages = {}
             for transport, sid, authenticated, address in subscriptions:
                 if transport not in packages:
                     packages[transport] = set()
-            
                 packages[transport].add((sid,authenticated,address))
-            
             for distributor in self.distributors:
                 transport = distributor.get_distribution_transport()
                 if transport in packages:
