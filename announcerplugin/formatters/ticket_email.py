@@ -14,10 +14,8 @@ def diff_cleanup(gen):
     for value in gen:
         if value.startswith('---'):
             continue
-        
         if value.startswith('+++'):
             continue
-            
         if value.startswith('@@'):
             yield '\n'
         else:
@@ -31,9 +29,12 @@ class TicketEmailFormatter(Component):
     implements(IAnnouncementFormatter)
         
     ticket_email_subject = Option('announcer', 'ticket_email_subject', 
-        "Ticket #${ticket.id}: ${ticket['summary']} {% if action %}[${action}]{% end %}")
+        "Ticket #${ticket.id}: ${ticket['summary']} " \
+                "{% if action %}[${action}]{% end %}")
     
-    ticket_email_header_fields = ListOption('announcer', 'ticket_email_header_fields', 'owner, reporter, milestone, priority, severity')
+    ticket_email_header_fields = ListOption('announcer', 
+            'ticket_email_header_fields', 
+            'owner, reporter, milestone, priority, severity')
     
     def get_format_transport(self):
         return "email"
@@ -48,15 +49,12 @@ class TicketEmailFormatter(Component):
             if realm == "ticket":
                 yield "text/plain"
                 yield "text/html"
-                
-        return
         
     def get_format_alternative(self, transport, realm, style):
         if transport == "email":
             if realm == "ticket":
                 if style == "text/html":
                     return "text/plain"
-
         return None
         
     def format_headers(self, transport, realm, style, event):
@@ -75,9 +73,9 @@ class TicketEmailFormatter(Component):
                 if event.changes:
                     if 'status' in event.changes:
                         action = 'Status -> %s' % (event.target['status'])
-                        
                 template = NewTextTemplate(self.ticket_email_subject)
-                return template.generate(ticket=event.target, event=event, action=action).render()
+                return template.generate(ticket=event.target, event=event, 
+                        action=action).render()
                 
     def format(self, transport, realm, style, event):
         if transport == "email":
@@ -91,29 +89,15 @@ class TicketEmailFormatter(Component):
         ticket = event.target
         short_changes = {}
         long_changes = {}
-        
         changed_items = [(field, to_unicode(old_value)) for \
                 field, old_value in event.changes.items()]
         for field, old_value in changed_items:
             new_value = to_unicode(ticket[field])
             if ('\n' in new_value) or ('\n' in old_value):
-                # long_changes[field.capitalize()] = \
-                # '\n'.join(
-                #     diff_cleanup(
-                #         difflib.context_diff(
-                #             old_value.split('\r\n'), new_value.split('\r\n'),
-                #             lineterm='', n=2
-                #         )
-                #     )
-                # )
                 long_changes[field.capitalize()] = '\n'.join(
-                    lineup(
-                        wrap(new_value, cols=67).split('\n')
-                    )
-                )
+                    lineup(wrap(new_value, cols=67).split('\n')))
             else:
                 short_changes[field.capitalize()] = (old_value, new_value)
-        
         data = dict(
             ticket = ticket,
             author = event.author,
@@ -129,20 +113,16 @@ class TicketEmailFormatter(Component):
             short_changes = short_changes,
             attachment= event.attachment
         )
-        
         chrome = Chrome(self.env)        
         dirs = []
         for provider in chrome.template_providers:
             dirs += provider.get_templates_dirs()
-
         templates = TemplateLoader(dirs, variable_lookup='lenient')
-
-        template = templates.load('ticket_email_plaintext.txt', cls=NewTextTemplate)
-
+        template = templates.load('ticket_email_plaintext.txt', 
+                cls=NewTextTemplate)
         if template:
             stream = template.generate(**data)
             output = stream.render('text')
-
         return output
         
     def _format_html(self, event):
@@ -150,10 +130,10 @@ class TicketEmailFormatter(Component):
         short_changes = {}
         long_changes = {}
         chrome = Chrome(self.env)        
-        
         for field, old_value in event.changes.items():
             new_value = ticket[field]
-            if (new_value and '\n' in new_value) or (old_value and '\n' in old_value):
+            if (new_value and '\n' in new_value) or \
+                    (old_value and '\n' in old_value):
                 long_changes[field.capitalize()] = HTML(
                     "<pre>\n%s\n</pre>" % (
                         '\n'.join(
@@ -170,7 +150,6 @@ class TicketEmailFormatter(Component):
 
             else:
                 short_changes[field.capitalize()] = (old_value, new_value)
-
         data = dict(
             ticket = ticket,
             author = event.author,
@@ -186,18 +165,15 @@ class TicketEmailFormatter(Component):
             short_changes = short_changes,
             attachment= event.attachment
         )
-        
         chrome = Chrome(self.env)
         dirs = []
         for provider in chrome.template_providers:
             dirs += provider.get_templates_dirs()
-        
         templates = TemplateLoader(dirs, variable_lookup='lenient')
-        
-        template = templates.load('ticket_email_mimic.html', cls=MarkupTemplate)
-        
+        template = templates.load('ticket_email_mimic.html', 
+                cls=MarkupTemplate)
         if template:
             stream = template.generate(**data)
             output = stream.render()
-        
         return output
+
