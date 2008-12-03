@@ -16,7 +16,8 @@ class WatchSubscriber(Component):
     implements(IRequestFilter, IRequestHandler, IAnnouncementSubscriber,
         ITicketChangeListener, IWikiChangeListener)
 
-    watchable_paths = ListOption('announcer', 'watchable_paths', 'wiki/*,ticket/*',
+    watchable_paths = ListOption('announcer', 'watchable_paths', 
+        'wiki/*,ticket/*',
         doc='List of URL paths to allow voting on. Globs are supported.')
 
     path_match = re.compile(r'/watch/(.*)')
@@ -26,7 +27,6 @@ class WatchSubscriber(Component):
         if self.path_match.match(req.path_info):
             realm = self.normalise_resource(req.path_info).split('/')[1]
             return "%s_VIEW" % realm.upper() in req.perm
-            
         return False
 
     def process_request(self, req):
@@ -34,41 +34,33 @@ class WatchSubscriber(Component):
         resource = self.normalise_resource(match.groups()[0])
         realm, _ = resource.split('/', 1)
         req.perm.require('%s_VIEW' % realm.upper())
-        
-        self.toggle_watched(req.session.sid, (not req.authname == 'anonymous') and 1 or 0, resource, req)
-
+        self.toggle_watched(req.session.sid, (not req.authname == \
+                'anonymous') and 1 or 0, resource, req)
         req.redirect(req.href(resource))
 
     def toggle_watched(self, sid, authenticated, resource, req=None):
         realm, resource = resource.split('/', 1)
-        
         if self.is_watching(sid, authenticated, realm, resource):
             self.set_unwatch(sid, authenticated, realm, resource)
-            self._schedule_notice(req, 'You are no longer watching this resource for changes.')
+            self._schedule_notice(req, 'You are no longer watching this ' \
+                    'resource for changes.')
         else:
             self.set_watch(sid, authenticated, realm, resource)
-            self._schedule_notice(req, 'You are now watching this resource for changes.')
+            self._schedule_notice(req, 'You are now watching this resource ' \
+                    'for changes.')
             
     def _schedule_notice(self, req, message):
         req.session['_announcer_watch_message_'] = message
                     
     def _add_notice(self, req):
         if '_announcer_watch_message_' in req.session:
-
-            # This is temporary during 0.11b1 as add_notice was added later 
-            # for the final 0.11 release.
-            try: 
-                from trac.web.chrome import add_notice
-            except:
-                from trac.web.chrome import add_warning as add_notice
-            
+            from trac.web.chrome import add_notice
             add_notice(req, req.session['_announcer_watch_message_'])
             del req.session['_announcer_watch_message_']
                     
     def is_watching(self, sid, authenticated, realm, resource):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        
         cursor.execute("""
             SELECT id
               FROM subscriptions
@@ -77,8 +69,8 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, int(authenticated), 'watcher', realm, '*', to_unicode(resource)))
-        
+        """, (sid, int(authenticated), 'watcher', realm, '*', 
+                to_unicode(resource)))
         result = cursor.fetchone()
         if result:
             return True
@@ -88,9 +80,7 @@ class WatchSubscriber(Component):
     def set_watch(self, sid, authenticated, realm, resource):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        
         self.set_unwatch(sid, authenticated, realm, resource, use_db=db)
-
         cursor.execute("""
             INSERT INTO subscriptions
                         (sid, authenticated, 
@@ -108,7 +98,6 @@ class WatchSubscriber(Component):
                 resource, 'email'
             )
         )
-        
         db.commit()
         
     def set_unwatch(self, sid, authenticated, realm, resource, use_db=None):
@@ -116,9 +105,7 @@ class WatchSubscriber(Component):
             db = self.env.get_db_cnx()
         else:
             db = use_db
-            
         cursor = db.cursor()
-
         cursor.execute("""
             DELETE
               FROM subscriptions
@@ -127,8 +114,8 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND category=%s
                AND rule=%s
-        """, (sid, int(authenticated), 'watcher', realm, '*', to_unicode(resource)))
-        
+        """, (sid, int(authenticated), 'watcher', realm, '*', 
+            to_unicode(resource)))
         if not use_db:
             db.commit()
             
@@ -136,18 +123,16 @@ class WatchSubscriber(Component):
     def pre_process_request(self, req, handler):
         self._add_notice(req)
         
-        if req.authname != "anonymous" or (req.authname == 'anonymous' and 'email' in req.session):
+        if req.authname != "anonymous" or (req.authname == 'anonymous' and \
+                'email' in req.session):
             for pattern in self.watchable_paths:
                 path = self.normalise_resource(req.path_info)
                 if re.match(pattern, path):
                     realm, _ = path.split('/', 1)
-                    
-                    if '%s_VIEW' % realm.upper() not in req.perm:
+                    if '%s_VIEW'%realm.upper() not in req.perm:
                         return handler
-                    
                     self.render_watcher(req)
                     break
-                    
         return handler
         
     def post_process_request(self, req, template, data, content_type):
@@ -157,16 +142,15 @@ class WatchSubscriber(Component):
     def render_watcher(self, req):
         resource = self.normalise_resource(req.path_info)
         realm, resource = resource.split('/', 1)
-                
-        if self.is_watching(req.session.sid, not req.authname == 'anonymous', realm, resource):
+        if self.is_watching(req.session.sid, not req.authname == 'anonymous', 
+                realm, resource):
             action_name = "Unwatch This"
         else:
             action_name = "Watch This"
-                
         add_ctxtnav(req, 
-                tag.a(
-                    action_name, href=req.href.watch(realm, resource)
-                )
+            tag.a(
+                action_name, href=req.href.watch(realm, resource)
+            )
         )
 
     def normalise_resource(self, resource):
@@ -189,9 +173,7 @@ class WatchSubscriber(Component):
         
     def wiki_page_deleted(self, page):
         db = self.env.get_db_cnx()
-
         cursor = db.cursor()
-
         cursor.execute("""
             DELETE
               FROM subscriptions
@@ -199,14 +181,12 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND rule=%s
         """, ('watcher', 'wiki', to_unicode(page.name)))
-
         db.commit()
 
     def wiki_page_version_deleted(*args):
         pass
 
     # ITicketChangeListener
-    
     def ticket_created(*args):
         pass
         
@@ -215,9 +195,7 @@ class WatchSubscriber(Component):
         
     def ticket_deleted(self, ticket):
         db = self.env.get_db_cnx()
-
         cursor = db.cursor()
-
         cursor.execute("""
             DELETE
               FROM subscriptions
@@ -225,11 +203,9 @@ class WatchSubscriber(Component):
                AND realm=%s
                AND rule=%s
         """, ('watcher', 'ticket', to_unicode(ticket.id)))
-
         db.commit()
     
     # IAnnouncementSubscriber    
-
     def get_subscription_realms(self):
         return ('wiki', 'ticket')
         
@@ -241,7 +217,6 @@ class WatchSubscriber(Component):
             if event.category in self.get_subscription_categories(event.realm):
                 db = self.env.get_db_cnx()
                 cursor = db.cursor()
-                
                 cursor.execute("""
                     SELECT transport, sid, authenticated
                       FROM subscriptions
@@ -254,10 +229,9 @@ class WatchSubscriber(Component):
                     event.target))))
             
                 for transport, sid, authenticated in cursor.fetchall():
-                    self.log.debug("WatchSubscriber added '%s (%s)' because of rule: watched" % (
-                        sid,authenticated and 'authenticated' or 'not authenticated'
-                        )
-                    )
+                    self.log.debug("WatchSubscriber added '%s (%s)' because " \
+                        "of rule: watched"%(sid,authenticated and \
+                        'authenticated' or 'not authenticated'))
                     yield (transport, sid, authenticated, None)
                     
     def _get_target_identifier(self, realm, target):
@@ -265,3 +239,4 @@ class WatchSubscriber(Component):
             return target.name
         elif realm == "ticket":
             return target.id
+

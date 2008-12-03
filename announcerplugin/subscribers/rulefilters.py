@@ -58,12 +58,10 @@ class RuleBasedTicketSubscriber(Component):
         
     def render_announcement_preference_box(self, req, box):
         add_stylesheet(req, 'announcerplugin/css/rulediv.css')
-        
         categories = {
             'ticket': ('created', 'changed', 'attachment added', 'deleted'),
             'wiki': ('created', 'changed', 'attachment added', 'deleted')
         }
-        
         rules = [
             dict(
                 id=1,
@@ -87,7 +85,6 @@ class RuleBasedTicketSubscriber(Component):
                 value="this or that",
             ),
         ]
-        
         data = dict(
             categories=categories,
             rules=rules,
