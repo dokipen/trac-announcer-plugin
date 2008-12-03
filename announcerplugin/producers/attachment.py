@@ -14,7 +14,6 @@ class AttachmentChangeProducer(Component):
 
     def attachment_added(self, attachment):
         parent = attachment.resource.parent
-
         if parent.realm == "ticket":
             ticket = Ticket(self.env, parent.id)
             announcer = AnnouncementSystem(ticket.env)
@@ -33,10 +32,4 @@ class AttachmentChangeProducer(Component):
             )            
 
     def attachment_deleted(self, attachment):
-        # announcer = AnnouncementSystem(ticket.env)
-        # announcer.send(
-        #     AttachmentChangeEvent(attachment.parent_realm, "attachment added", 
-        #         attachment, author=attachment.author, 
-        #     )
-        # )
         pass

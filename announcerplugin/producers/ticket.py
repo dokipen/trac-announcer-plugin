@@ -8,7 +8,6 @@ class TicketChangeEvent(AnnouncementEvent):
                  comment=None, author=None, changes={},
                  attachment=None):
         AnnouncementEvent.__init__(self, realm, category, target)
-
         self.author = author
         self.comment = comment
         self.changes = changes
@@ -17,19 +16,15 @@ class TicketChangeEvent(AnnouncementEvent):
     def get_basic_terms(self):
         for term in AnnouncementEvent.get_basic_terms(self):
             yield term
-        
         ticket = self.target
         yield ticket['component']
 
     def get_session_terms(self, session_id):
         ticket = self.target
-        
         if session_id == self.author:
             yield "updater"
-            
         if session_id == ticket['owner']:
             yield "owner"
-        
         if session_id == ticket['reporter']:
             yield "reporter"
             
@@ -55,9 +50,9 @@ class TicketChangeProducer(Component):
         )
         
     def ticket_changed(self, ticket, comment, author, old_values):
-        if old_values.keys() == ['cc'] and not comment and self.ignore_cc_changes:
+        if old_values.keys() == ['cc'] and not comment and \
+                self.ignore_cc_changes:
             return
-            
         announcer = AnnouncementSystem(ticket.env)
         announcer.send(
             TicketChangeEvent("ticket", "changed", ticket, 

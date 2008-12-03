@@ -1,5 +1,3 @@
-import inspect
-
 from trac.core import *
 from trac.config import BoolOption
 from trac.wiki.api import IWikiChangeListener
@@ -11,7 +9,6 @@ class WikiChangeEvent(AnnouncementEvent):
                  timestamp=None, remote_addr=None,
                  attachment=None):
         AnnouncementEvent.__init__(self, realm, category, target)
-
         self.author = author
         self.comment = comment
         self.version = version
