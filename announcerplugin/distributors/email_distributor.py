@@ -31,7 +31,6 @@ class DeliveryThread(threading.Thread):
     def run(self):
         while 1:
             sendfrom, recipients, message = self._queue.get()
-            
             self._sender(sendfrom, recipients, message)
             
 class EmailDistributor(Component):
@@ -39,7 +38,7 @@ class EmailDistributor(Component):
     implements(IAnnouncementDistributor, IAnnouncementPreferenceProvider)
 
     formatters = ExtensionPoint(IAnnouncementFormatter)
-    resolvers = OrderedExtensionsOption('announcer', 'email_address_resolvers', 
+    resolvers = OrderedExtensionsOption('announcer', 'email_address_resolvers',
         IAnnouncementAddressResolver, 'SessionEmailResolver', 
     )
 
@@ -113,17 +112,19 @@ class EmailDistributor(Component):
         If the setting is not defined, then the [$project_name] prefix.
         If no prefix is desired, then specifying an empty option 
         will disable it.(''since 0.10.1'').""")
+
     smtp_to = Option('announcer', 'smtp_to', None, 'Default To: field')
     
-    use_threaded_delivery = BoolOption('announcer', 'use_threaded_delivery', False, 
-    """If true, the actual delivery of the message will occur in a separate thread.
+    use_threaded_delivery = BoolOption('announcer', 'use_threaded_delivery', 
+            False, """If true, the actual delivery of the message will occur 
+            in a separate thread.  Enabling this will improve responsiveness 
+            for requests that end up with an announcement being sent over 
+            email. It requires building Python with threading support 
+            enabled-- which is usually the case. To test, start Python and 
+            type 'import threading' to see if it raises an error.""")
     
-    Enabling this will improve responsiveness for requests that end up with an
-    announcement being sent over email. It requires building Python with threading
-    support enabled-- which is usually the case. To test, start Python and type
-    'import threading' to see if it raises an error.""")
-    
-    default_email_format = Option('announcer', 'default_email_format', 'text/plain')
+    default_email_format = Option('announcer', 'default_email_format', 
+            'text/plain')
 
     def __init__(self):
         self.delivery_queue = None
@@ -134,7 +135,6 @@ class EmailDistributor(Component):
             self.delivery_queue = Queue.Queue()
             thread = DeliveryThread(self.delivery_queue, self._transmit)
             thread.start()
-
         return self.delivery_queue
     
     # IAnnouncementDistributor
@@ -148,65 +148,54 @@ class EmailDistributor(Component):
         to = self.config.get('announcer', 'smtp_to')
         if transport == self.get_distribution_transport():
             formats = {}
-            
             for f in self.formatters:
                 if f.get_format_transport() == transport:
                     if event.realm in f.get_format_realms(transport):
                         styles = f.get_format_styles(transport, event.realm)
                         for style in styles:
                             formats[style] = f
-            
             self.log.debug(
                 "EmailDistributor has found the following formats capable "
-                "of handling '%s' of '%s': %s" % (
-                    transport, event.realm, ', '.join(formats.keys())
-                )
-            )
+                "of handling '%s' of '%s': %s"%(transport, event.realm, 
+                    ', '.join(formats.keys())))
             
             if not formats:
-                self.log.error(
-                    "EmailDistributor is unable to continue without supporting formatters."
-                )
+                self.log.error("EmailDistributor is unable to continue " \
+                        "without supporting formatters.")
                 return
-            
             messages = {}
-
             for name, authenticated, address in recipients:
                 if name:
-                    format = self._get_preferred_format(event.realm, name, authenticated)
+                    format = self._get_preferred_format(event.realm, name, 
+                            authenticated)
                 else:
                     format = self._get_default_format()
-                    
                 if format not in messages:
                     messages[format] = set()
-                
                 if name and not address:
                     for resolver in self.resolvers:
-                        address = resolver.get_address_for_name(name, authenticated)
+                        address = resolver.get_address_for_name(name, 
+                                authenticated)
                         if address:
-                            self.log.debug("EmailDistributor found the address '%s' for '%s (%s)' via: %s" % (
-                                    address, name, authenticated and 'authenticated' or 'not authenticated', 
-                                    resolver.__class__.__name__
-                                )
-                            )
+                            self.log.debug("EmailDistributor found the " \
+                                    "address '%s' for '%s (%s)' via: %s"%(
+                                    address, name, authenticated and \
+                                    'authenticated' or 'not authenticated', 
+                                    resolver.__class__.__name__))
                             break
-                            
                 if address:
                     messages[format].add((name, authenticated, address))
                 else:
-                    self.log.debug("EmailDistributor was unable to find an address for: %s (%s)" % (
-                            name, authenticated and 'authenticated' or 'not authenticated'
-                        )
-                    )
-                    
+                    self.log.debug("EmailDistributor was unable to find an " \
+                            "address for: %s (%s)"%(name, authenticated and \
+                            'authenticated' or 'not authenticated'))
             for format in messages.keys():
                 if messages[format]:
                     self.log.debug(
-                        "EmailDistributor is sending event as '%s' to: %s" % (
-                            format, ', '.join(x[2] for x in messages[format])
-                        )
-                    )
-                    self._do_send(transport, event, format, messages[format], formats[format], None, to, public_cc)
+                        "EmailDistributor is sending event as '%s' to: %s"%(
+                            format, ', '.join(x[2] for x in messages[format])))
+                    self._do_send(transport, event, format, messages[format], 
+                            formats[format], None, to, public_cc)
                     
     def _get_default_format(self):
         return self.default_email_format
@@ -214,7 +203,6 @@ class EmailDistributor(Component):
     def _get_preferred_format(self, realm, sid, authenticated):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        
         cursor.execute("""
             SELECT value 
               FROM session_attribute
@@ -222,14 +210,12 @@ class EmailDistributor(Component):
                AND authenticated=%s
                AND name=%s
         """, (sid, int(authenticated), 'announcer_email_format_%s' % realm))
-                
         result = cursor.fetchone()
         if result:
             chosen = result[0]
-            self.log.debug("EmailDistributor determined the preferred format for '%s (%s)' is: %s" % (
-                    sid, authenticated and 'authenticated' or 'not authenticated', chosen
-                )
-            )
+            self.log.debug("EmailDistributor determined the preferred format" \
+                    " for '%s (%s)' is: %s"%(sid, authenticated and \
+                    'authenticated' or 'not authenticated', chosen))
             return chosen
         else:
             return self._get_default_format()
@@ -257,7 +243,7 @@ class EmailDistributor(Component):
             self._charset.input_codec = None
             self._charset.output_charset = 'ascii'
         else:
-            raise TracError(_('Invalid email encoding setting: %s' % pref))
+            raise TracError(_('Invalid email encoding setting: %s'%pref))
 
     def _do_send(self, transport, event, format, recipients, formatter, 
             backup=None, to=None, public_cc=False):
@@ -321,17 +307,16 @@ class EmailDistributor(Component):
         del msgText['Content-Transfer-Encoding']
         msgText.set_charset(self._charset)
         parentMessage.attach(msgText)
-        
         start = time.time()
-        
-        package = (self.smtp_from, [x[2] for x in recipients if x], rootMessage.as_string() )
+        package = (self.smtp_from, [x[2] for x in recipients if x], 
+                rootMessage.as_string())
         if self.use_threaded_delivery:
             self.get_delivery_queue().put(package)
         else:
             self._transmit(*package)
-
         stop = time.time()
-        self.log.debug("EmailDistributor took %s seconds to send." % (round(stop-start,2)))
+        self.log.debug("EmailDistributor took %s seconds to send."\
+                %(round(stop-start,2)))
 
     def _transmit(self, smtpfrom, addresses, message):
         smtp = smtplib.SMTP(self.smtp_server, self.smtp_port)
@@ -355,32 +340,26 @@ class EmailDistributor(Component):
         cfg = self.config
         sess = req.session
         transport = self.get_distribution_transport()
-        
         supported_realms = {}
         for formatter in self.formatters:
             if formatter.get_format_transport() == transport:
                 for realm in formatter.get_format_realms(transport):
                     if realm not in supported_realms:
                         supported_realms[realm] = set()
-                        
                     supported_realms[realm].update(
                        formatter.get_format_styles(transport, realm)
                     )
-                    
-        
         if req.method == "POST":
             for realm in supported_realms:
-                opt = req.args.get('email_format_%s' % realm, False)
+                opt = req.args.get('email_format_%s'%realm, False)
                 if opt:
-                    sess['announcer_email_format_%s' % realm] = opt
-        
+                    sess['announcer_email_format_%s'%realm] = opt
         prefs = {}
         for realm in supported_realms:
-            prefs[realm] = sess.get('announcer_email_format_%s' % realm, None)
-        
+            prefs[realm] = sess.get('announcer_email_format_%s'%realm, None)
         data = dict(
             realms = supported_realms,
             preferences = prefs,
         )
-        
         return "prefs_announcer_email.html", data    
+
