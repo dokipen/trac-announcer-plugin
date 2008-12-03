@@ -13,5 +13,4 @@ class DefaultDomainEmailResolver(Component):
     def get_address_for_name(self, name, authenticated):
         if self.smtp_default_domain:
             return '%s@%s' % (name, self.smtp_default_domain)
-            
         return None    

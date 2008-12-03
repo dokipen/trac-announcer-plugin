@@ -16,9 +16,7 @@ class SessionEmailResolver(Component):
                AND authenticated=%s
                AND name=%s
         """, (name, authenticated and 1 or 0, 'email'))
-        
         result = cursor.fetchone()
         if result:
             return result[0]
-            
         return None
