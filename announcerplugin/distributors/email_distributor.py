@@ -264,7 +264,6 @@ class EmailDistributor(Component):
         output = formatter.format(transport, event.realm, format, event)
         subject = formatter.format_subject(transport, event.realm, format, 
                 event)
-        charset = self.env.config.get('trac', 'default_charset', 'utf-8')
         alternate_format = formatter.get_format_alternative(transport, 
                 event.realm, format)
         if alternate_format:
@@ -314,9 +313,13 @@ class EmailDistributor(Component):
         if alternate_output:
             alt_msg_format = 'html' in alternate_format and 'html' or 'plain'
             msgText = MIMEText(alternate_output, alt_msg_format)
+            del msgText['Content-Transfer-Encoding']
+            msgText.set_charset(self._charset)
             parentMessage.attach(msgText)
         msg_format = 'html' in format and 'html' or 'plain'
         msgText = MIMEText(output, msg_format)
+        del msgText['Content-Transfer-Encoding']
+        msgText.set_charset(self._charset)
         parentMessage.attach(msgText)
         
         start = time.time()
