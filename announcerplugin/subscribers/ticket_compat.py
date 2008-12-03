@@ -126,7 +126,7 @@ class LegacyTicketSubscriber(Component):
             component = model.Component(self.env, ticket['component'])
             if component.owner:
                 self.log.debug("LegacyTicketSubscriber added " \
-                        "'%s' because of rule: component owner" \
+                        "'%s' because of rule: always_notify_component_owner" \
                         % (component.owner,))
                 yield ('email', component.owner, True, None)
         except ResourceNotFound, message:
