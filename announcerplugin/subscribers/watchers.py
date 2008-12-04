@@ -121,6 +121,9 @@ class WatchSubscriber(Component):
             
     # IRequestFilter methods
     def pre_process_request(self, req, handler):
+        return handler
+        
+    def post_process_request(self, req, template, data, content_type):
         self._add_notice(req)
         
         if req.authname != "anonymous" or (req.authname == 'anonymous' and \
@@ -130,12 +133,9 @@ class WatchSubscriber(Component):
                 if re.match(pattern, path):
                     realm, _ = path.split('/', 1)
                     if '%s_VIEW'%realm.upper() not in req.perm:
-                        return handler
+                        return (template, data, content_type)
                     self.render_watcher(req)
                     break
-        return handler
-        
-    def post_process_request(self, req, template, data, content_type):
         return (template, data, content_type)
 
     # Internal methods
