@@ -29,7 +29,10 @@ class WikiEmailFormatter(Component):
     implements(IAnnouncementFormatter)
         
     wiki_email_subject = Option('announcer', 'wiki_email_subject', 
-            "Page: ${page.name} ${action}")
+            "Page: ${page.name} ${action}",
+            """Format string for the wiki email subject.  This is a
+               mini genshi template and it is passed the page, event
+               and action objects.""")
     
     def get_format_transport(self):
         return "email"

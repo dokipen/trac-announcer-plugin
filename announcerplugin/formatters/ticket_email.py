@@ -30,11 +30,15 @@ class TicketEmailFormatter(Component):
         
     ticket_email_subject = Option('announcer', 'ticket_email_subject', 
         "Ticket #${ticket.id}: ${ticket['summary']} " \
-                "{% if action %}[${action}]{% end %}")
+                "{% if action %}[${action}]{% end %}",
+            """Format string for ticket email subject.  This is 
+               a mini genshi template that is passed the ticket
+               event and action objects.""")
     
     ticket_email_header_fields = ListOption('announcer', 
             'ticket_email_header_fields', 
-            'owner, reporter, milestone, priority, severity')
+            'owner, reporter, milestone, priority, severity',
+            doc="""Comma seperated list of fields to appear in tickets.""")
     
     def get_format_transport(self):
         return "email"
