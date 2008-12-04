@@ -39,8 +39,11 @@ class EmailDistributor(Component):
 
     formatters = ExtensionPoint(IAnnouncementFormatter)
     resolvers = OrderedExtensionsOption('announcer', 'email_address_resolvers',
-        IAnnouncementAddressResolver, 'SessionEmailResolver', 
-    )
+        IAnnouncementAddressResolver, 'SpecifiedEmailResolver, '\
+        'SessionEmailResolver, DefaultDomainEmailResolver', 
+        doc="""Comma seperated list of email resolver components in the order 
+        they will be called.  If an email address is resolved, the remaining 
+        resolvers will no be called.""")
 
     smtp_enabled = BoolOption('announcer', 'smtp_enabled', 'false',
         """Enable SMTP (email) notification.""")
@@ -124,7 +127,10 @@ class EmailDistributor(Component):
             type 'import threading' to see if it raises an error.""")
     
     default_email_format = Option('announcer', 'default_email_format', 
-            'text/plain')
+            'text/plain',
+            doc="""The default mime type of the email notifications.  This
+            can be overriden on a per user basis through the announcer
+            preferences panel.""")
 
     def __init__(self):
         self.delivery_queue = None
