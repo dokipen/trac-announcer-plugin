@@ -76,7 +76,6 @@ class LegacyTicketSubscriber(Component):
 
     def render_announcement_preference_box(self, req, panel):
         if req.method == "POST":
-            self.log.error(req.args)
             for attr in ('component_owner', 'owner', 'reporter', 'updater'):
                 if self.__getattribute__('always_notify_%s'%attr):
                     val = req.args.get('legacy_notify_%s'%attr, '0')
@@ -95,7 +94,6 @@ class LegacyTicketSubscriber(Component):
             legacy_notify_updater = req.session.get(
                 'announcer_legacy_notify_updater', '0') == '1' or None,
         )
-        self.log.error(data)
         return "prefs_announcer_legacy.html", data
 
     def get_subscription_realms(self):
