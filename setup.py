@@ -49,5 +49,6 @@ setup(
         'trac.plugins': [
             'announcerplugin = announcerplugin',
         ]    
-    }
+    },
+    test_suite = 'announcerplugin.tests',
 )
