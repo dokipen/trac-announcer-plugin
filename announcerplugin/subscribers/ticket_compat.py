@@ -1,12 +1,15 @@
-from trac.core import Component, implements
+import re
+
+from trac.core import *
+from trac.config import BoolOption, Option
+from trac.resource import ResourceNotFound
+from trac.ticket import model
+from trac.util.text import to_unicode
+from trac.util.translation import _
+from trac.web.chrome import add_warning
+
 from announcerplugin.api import IAnnouncementSubscriber, istrue
 from announcerplugin.api import IAnnouncementPreferenceProvider
-from trac.ticket import model
-from trac.web.chrome import add_warning
-from trac.config import BoolOption
-import re
-from trac.resource import ResourceNotFound
-from trac.util.text import to_unicode
 
 class StaticTicketSubscriber(Component):
     """The static ticket subscriber implements a policy to -always- send an 
@@ -14,25 +17,36 @@ class StaticTicketSubscriber(Component):
     the announcer section of the trac.ini"""
     
     implements(IAnnouncementSubscriber)
+
+    smtp_always_cc = Option("announcer", "smtp_always_cc", 
+        doc="""Email addresses specified here will always
+               be cc'd on all notifications.""")
+
+    smtp_always_bcc = Option("announcer", "smtp_always_bcc", 
+        doc="""Email addresses specified here will always
+               be cc'd on all notifications.  With announce,
+               bcc is unneccesary since users can't see
+               each others email addresses.""")
     
-    def __init__(self):
-        bcc = self.config.get('announcer', 'smtp_always_bcc')
-        if bcc:
-            self._returnval = ('*', )
-            self.bcc = bcc
-        else:
-            self._returnval = tuple()
-            
     def get_subscription_realms(self):
-        self._returnval
+        return (self.smtp_always_bcc or self.smtp_always_cc) and \
+                ('*',) or tuple()
         
     def get_subscription_categories(self, realm):
-        return self._returnval
+        return (self.smtp_always_bcc or self.smtp_always_cc) and \
+                ('*',) or tuple()
         
     def get_subscriptions_for_event(self, event):
-        self.log.debug("StaticTicketSubscriber added '%s' because of rule: " \
-                "smtp_always_bcc" % self.bcc)
-        yield ('email', None, False, self.bcc)
+        if self.smtp_always_cc:
+            for s in self.smtp_always_cc.split(','):
+                self.log.debug(_("StaticTicketSubscriber added '%s' " \
+                        "because of rule: smtp_always_cc"%s))
+                yield ('email', None, False, s.strip())
+        if self.smtp_always_bcc:
+            for s in self.smtp_always_bcc.split(','):
+                self.log.debug(_("StaticTicketSubscriber added '%s' " \
+                        "because of rule: smtp_always_bcc"%s))
+                yield ('email', None, False, s.strip())
 
 class LegacyTicketSubscriber(Component):
     implements(IAnnouncementSubscriber, IAnnouncementPreferenceProvider)
@@ -61,38 +75,27 @@ class LegacyTicketSubscriber(Component):
         yield "legacy", "Ticket Notifications"
 
     def render_announcement_preference_box(self, req, panel):
-        cfg = self.config
-        sess = req.session
-        always_notify_owner = istrue(
-            cfg.get('announcer', 'always_notify_owner', None)
-        )
-        always_notify_reporter = istrue(
-            cfg.get('announcer', 'always_notify_reporter', None)
-        )
-        always_notify_updater = istrue(
-            cfg.get('announcer', 'always_notify_updater', None)
-        )
         if req.method == "POST":
-            if always_notify_owner:
-                sess['announcer_legacy_notify_owner'] = to_unicode(
-                        req.args.get('legacy_notify_owner', 0))
-            if always_notify_reporter:
-                sess['announcer_legacy_notify_reporter'] = to_unicode(
-                        req.args.get('legacy_notify_reporter', 0))
-            if always_notify_updater:
-                sess['announcer_legacy_notify_updater'] = to_unicode(
-                        req.args.get('legacy_notify_updater', 0))
+            self.log.error(req.args)
+            for attr in ('component_owner', 'owner', 'reporter', 'updater'):
+                if self.__getattribute__('always_notify_%s'%attr):
+                    val = req.args.get('legacy_notify_%s'%attr, '0')
+                    req.session['announcer_legacy_notify_%s'%attr] = val
         data = dict(
-            always_notify_owner = always_notify_owner,
-            always_notify_reporter = always_notify_reporter,
-            always_notify_updater = always_notify_updater,
-            legacy_notify_owner = istrue(sess.get(
-                'announcer_legacy_notify_owner', True), None),
-            legacy_notify_reporter = istrue(sess.get(
-                'announcer_legacy_notify_reporter', True), None),
-            legacy_notify_updater = istrue(sess.get(
-                'announcer_legacy_notify_updater', True), None),
+            always_notify_component_owner = self.always_notify_component_owner,
+            always_notify_owner = self.always_notify_owner,
+            always_notify_reporter = self.always_notify_reporter,
+            always_notify_updater = self.always_notify_updater,
+            legacy_notify_component_owner = req.session.get(
+                'announcer_legacy_notify_component_owner', '0') == '1' or None,
+            legacy_notify_owner = req.session.get(
+                'announcer_legacy_notify_owner', '0') == '1' or None,
+            legacy_notify_reporter = req.session.get(
+                'announcer_legacy_notify_reporter', '0') == '1' or None,
+            legacy_notify_updater = req.session.get(
+                'announcer_legacy_notify_updater', '0') == '1' or None,
         )
+        self.log.error(data)
         return "prefs_announcer_legacy.html", data
 
     def get_subscription_realms(self):
@@ -105,75 +108,68 @@ class LegacyTicketSubscriber(Component):
             return tuple()
 
     def get_subscriptions_for_event(self, event):
-        if event.realm != "ticket":
-            return
-        if not event.category in ('created', 'changed', 'attachment added'):
-            return
-        ticket = event.target
-        for s in self._always_notify_component_owner(ticket):
-            yield s
-        for s in self._always_notify_ticket_owner(ticket):
-            yield s
-        for s in self._always_notify_ticket_reporter(ticket): 
-            yield s
-        for s in self._always_notify_ticket_updater(event, ticket): 
-            yield s
+        if event.realm == "ticket":
+            if event.category in ('created', 'changed', 'attachment added'):
+                ticket = event.target
+                subs = filter(lambda a: a, (
+                    self._always_notify_component_owner(ticket),
+                    self._always_notify_ticket_owner(ticket),
+                    self._always_notify_ticket_reporter(ticket), 
+                    self._always_notify_ticket_updater(event, ticket)
+                ))
+                for s in subs:
+                    yield s
 
     def _always_notify_component_owner(self, ticket):
-        if not self.always_notify_component_owner:
-            return
         try:
             component = model.Component(self.env, ticket['component'])
-            if component.owner:
-                self.log.debug("LegacyTicketSubscriber added " \
-                        "'%s' because of rule: always_notify_component_owner" \
-                        % (component.owner,))
-                yield ('email', component.owner, True, None)
         except ResourceNotFound, message:
-            self.log.warn("LegacyTicketSubscriber couldn't add " \
+            self.log.warn(_("LegacyTicketSubscriber couldn't add " \
                     "component owner because component was not found, " \
-                    "message: '%s'"%(message,))    
+                    "message: '%s'"%(message,)))
+            return
+        if self.always_notify_component_owner and component.owner and not \
+                self._check_opt_out('notify_component_owner', component.owner):
+            self._log_sub(component.owner, True, 
+                    'always_notify_component_owner')
+            return ('email', component.owner, True, None)
 
     def _always_notify_ticket_owner(self, ticket):
-        if not self.always_notify_owner or not ticket['owner'] or \
+        if self.always_notify_owner and ticket['owner'] and not \
             self._check_opt_out('notify_owner', ticket['owner']):                   
-            return
-        owner = ticket['owner']
-        if '@' in owner:
-            name, authenticated, address = None, False, owner
-        else:
-            name, authenticated, address = owner, True, None
-        self.log.debug(
-            "LegacyTicketSubscriber added '%s (%s)' because of rule: " \
-                "always_notify_owner"%(owner, authenticated and \
-                'authenticated' or 'not authenticated'))
-        yield ('email', name, authenticated, address)
+            owner = ticket['owner']
+            if '@' in owner:
+                name, authenticated, address = None, False, owner
+            else:
+                name, authenticated, address = owner, True, None
+            self._log_sub(owner, authenticated, 'always_notify_owner')
+            return ('email', name, authenticated, address)
         
     def _always_notify_ticket_reporter(self, ticket):
-        if not self.always_notify_reporter or not ticket['reporter'] or \
+        if self.always_notify_reporter and ticket['reporter'] and not \
             self._check_opt_out('notify_reporter', ticket['reporter']):
-            return
-        reporter = ticket['reporter']
-        if '@' in reporter:
-            name, authenticated, address = None, False, reporter
-        else:
-            name, authenticated, address = reporter, True, None
-        self.log.debug(
-            "LegacyTicketSubscriber added '%s (%s)' because of rule: " \
-                "always_notify_reporter"%(reporter, authenticated and \
-                'authenticated' or 'not authenticated'))
-        yield ('email', name, authenticated, address)
+            reporter = ticket['reporter']
+            if '@' in reporter:
+                name, authenticated, address = None, False, reporter
+            else:
+                name, authenticated, address = reporter, True, None
+            self._log_sub(reporter, authenticated, 'always_notify_reporter')
+            return ('email', name, authenticated, address)
 
     def _always_notify_ticket_updater(self, event, ticket):
-        if not self.always_notify_updater or not event.author or \
+        if self.always_notify_updater and event.author and not \
             self._check_opt_out('notify_updater', event.author):
-            return
-        self.log.debug("LegacyTicketSubscriber added '%s " \
-                "(authenticated)' because of rule: " \
-                "always_notify_updater"%event.author)
-        yield ('email', event.author, True, None)
+            self._log_sub(event.author, True, 'always_notify_updater')
+            return ('email', event.author, True, None)
+    
+    def _log_sub(self, author, authenticated, rule):
+        "Log subscriptions"
+        auth = authenticated and 'authenticated' or 'not authenticated'
+        self.log.debug(_("LegacyTicketSubscriber added '%s " \
+            "(%s)' because of rule: %s"%(author, auth, rule)))
         
     def _check_opt_out(self, preference, sid):
+        "Check if user has opted out of notification"
         db = self.env.get_db_cnx()
         cursor = db.cursor()
         cursor.execute("""
@@ -187,8 +183,8 @@ class LegacyTicketSubscriber(Component):
         if result:
             optout = (result[0] == '0')
             if optout:
-                self.log.debug("LegacyTicketSubscriber excluded '%s' " \
-                        "because of opt-out rule: %s" % (sid,preference))
+                self.log.debug(_("LegacyTicketSubscriber excluded '%s' " \
+                        "because of opt-out rule: %s"%(sid,preference)))
                 return True
         return False
 
@@ -219,7 +215,8 @@ class CarbonCopySubscriber(Component):
                         name = chunk
                         address = None
                     if name or address:
-                        self.log.debug("CarbonCopySubscriber added '%s <%s>'" \
-                            " because of rule: carbon copied" % (name,address))
+                        self.log.debug(_("CarbonCopySubscriber added '%s " \
+                            "<%s>' because of rule: carbon copied" \
+                            %(name,address)))
                         yield ('email', name, name and True or False, address)
         
