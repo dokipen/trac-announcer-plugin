@@ -264,6 +264,7 @@ class EmailDistributor(Component):
         else:
             alternate_output = None
         rootMessage = MIMEMultipart("related")
+        proj_name = self.env.project_name
         trac_version = get_pkginfo(trac.core).get('version', trac.__version__)
         announcer_version = get_pkginfo(announcerplugin).get('version', 
                 'Undefined')
@@ -271,7 +272,7 @@ class EmailDistributor(Component):
                 'v%s'%(announcer_version, trac_version)
         rootMessage['X-Trac-Version'] = trac_version
         rootMessage['X-Announcer-Version'] = announcer_version
-        rootMessage['X-Trac-Project'] = self.env.project_name
+        rootMessage['X-Trac-Project'] = proj_name
         rootMessage['Precedence'] = 'bulk'
         rootMessage['Auto-Submitted'] = 'auto-generated'
         provided_headers = formatter.format_headers(transport, event.realm, 
@@ -290,7 +291,9 @@ class EmailDistributor(Component):
         del rootMessage['Content-Transfer-Encoding']
         rootMessage.set_charset(self._charset)
         rootMessage['Subject'] = Header(subject, self._charset) 
-        rootMessage['From'] = self.smtp_from
+        from_header = '"%s" <%s>'%(self.smtp_from_name or proj_name, 
+                self.smtp_from)
+        rootMessage['From'] = from_header
         if to:
             rootMessage['To'] = '"%s"'%(to)
         if public_cc:
@@ -314,7 +317,7 @@ class EmailDistributor(Component):
         msgText.set_charset(self._charset)
         parentMessage.attach(msgText)
         start = time.time()
-        package = (self.smtp_from, [x[2] for x in recipients if x], 
+        package = (from_header, [x[2] for x in recipients if x], 
                 rootMessage.as_string())
         if self.use_threaded_delivery:
             self.get_delivery_queue().put(package)
