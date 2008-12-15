@@ -28,7 +28,7 @@ class JoinableGroupSubscriber(Component):
     def get_subscriptions_for_event(self, event):
         if event.realm == 'ticket':
             if event.category in ('changed', 'created', 'attachment added'):
-                cc = event.target['cc']
+                cc = event.target['cc'] or ''
                 for chunk in re.split('\s|,', cc):
                     chunk = chunk.strip()
                     if chunk.startswith('@'):
