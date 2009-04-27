@@ -119,7 +119,7 @@ class EmailDistributor(Component):
     smtp_to = Option('announcer', 'smtp_to', None, 'Default To: field')
     
     use_threaded_delivery = BoolOption('announcer', 'use_threaded_delivery', 
-            False, """If true, the actual delivery of the message will occur 
+            'false', """If true, the actual delivery of the message will occur 
             in a separate thread.  Enabling this will improve responsiveness 
             for requests that end up with an announcement being sent over 
             email. It requires building Python with threading support 
@@ -294,6 +294,8 @@ class EmailDistributor(Component):
         from_header = '"%s" <%s>'%(self.smtp_from_name or proj_name, 
                 self.smtp_from)
         rootMessage['From'] = from_header
+        if self.smtp_always_bcc:
+            rootMessage['Bcc'] = self.smtp_always_bcc
         if to:
             rootMessage['To'] = '"%s"'%(to)
         if public_cc:

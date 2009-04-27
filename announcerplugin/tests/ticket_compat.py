@@ -48,6 +48,10 @@ class StaticTicketSubscriberTestCase(unittest.TestCase):
         self.assertTrue(('email', None, False, 'bu2') in subs)
         self.assertTrue(('email', None, False, 'bu3') in subs)
 
+    def test_list_size(self):
+        subs = [s for s in self.out.get_subscriptions_for_event(None)]
+        asswertEquals(6, len(subs))
+
 def suite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(StaticTicketSubscriberTestCase, 'test'))

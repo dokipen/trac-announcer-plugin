@@ -51,23 +51,23 @@ class StaticTicketSubscriber(Component):
 class LegacyTicketSubscriber(Component):
     implements(IAnnouncementSubscriber, IAnnouncementPreferenceProvider)
     
-    always_notify_owner = BoolOption("announcer", "always_notify_owner", False, 
+    always_notify_owner = BoolOption("announcer", "always_notify_owner", 'true', 
         """The always_notify_owner option mimics the option of the same name 
         in the notification section, except users can opt-out in their 
         preferences. Used only if LegacyTicketSubscriber is enabled.""")
 
     always_notify_reporter = BoolOption("announcer", "always_notify_reporter", 
-        False, """The always_notify_reporter option mimics the option of the 
+        'true', """The always_notify_reporter option mimics the option of the 
         same name in the notification section, except users can opt-out in 
         their preferences. Used only if LegacyTicketSubscriber is enabled.""")
 
     always_notify_updater = BoolOption("announcer", "always_notify_updater", 
-        False, """The always_notify_updater option mimics the option of the 
+        'true', """The always_notify_updater option mimics the option of the 
         same name in the notification section, except users can opt-out in 
         their preferences. Used only if LegacyTicketSubscriber is enabled.""")
 
     always_notify_component_owner = BoolOption("announcer", 
-            "always_notify_component_owner", True,
+            "always_notify_component_owner", 'true',
             """Whether or not to notify the owner of the ticket's 
             component.""")
         

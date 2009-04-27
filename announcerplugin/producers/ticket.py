@@ -32,7 +32,7 @@ class TicketChangeEvent(AnnouncementEvent):
 class TicketChangeProducer(Component):
     implements(ITicketChangeListener)
     
-    ignore_cc_changes = BoolOption('announcer', 'ignore_cc_changes', False,
+    ignore_cc_changes = BoolOption('announcer', 'ignore_cc_changes', 'false',
         doc="""When true, the system will not send out announcement events if
         the only field that was changed was CC. A change to the CC field that
         happens at the same as another field will still result in an event
