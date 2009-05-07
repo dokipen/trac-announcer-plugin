@@ -18,7 +18,7 @@ class WatchSubscriber(Component):
 
     watchable_paths = ListOption('announcer', 'watchable_paths', 
         'wiki/*,ticket/*',
-        doc='List of URL paths to allow voting on. Globs are supported.')
+        doc='List of URL paths to allow watching. Globs are supported.')
 
     path_match = re.compile(r'/watch/(.*)')
 
