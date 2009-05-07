@@ -1,13 +1,14 @@
 from trac.core import Component, implements
 from announcerplugin.api import IAnnouncementFormatter
-from trac.config import Option, IntOption
+from trac.config import Option, IntOption, BoolOption
 from genshi.template import NewTextTemplate, MarkupTemplate
 from genshi import HTML
 from trac.web.href import Href
 from trac.web.chrome import Chrome
+from trac.wiki.model import WikiPage
 from genshi.template import TemplateLoader
 from trac.util.text import wrap
-from trac.versioncontrol.diff import diff_blocks
+from trac.versioncontrol.diff import diff_blocks, unified_diff
 import difflib
 
 def diff_cleanup(gen):
@@ -25,6 +26,12 @@ def lineup(gen):
     for value in gen:
         yield ' ' + value
 
+diff_header = """Index: %(name)s
+==============================================================================
+--- %(name)s (version: %(oldversion)s)
++++ %(name)s (version: %(version)s)
+"""
+
 class WikiEmailFormatter(Component):
     implements(IAnnouncementFormatter)
         
@@ -33,6 +40,9 @@ class WikiEmailFormatter(Component):
             """Format string for the wiki email subject.  This is a
                mini genshi template and it is passed the page, event
                and action objects.""")
+    wiki_email_diff = BoolOption('announcer', 'wiki_email_diff', 
+            "true",
+            """Should a wiki diff be sent with emails?""")
     
     def get_format_transport(self):
         return "email"
@@ -79,10 +89,21 @@ class WikiEmailFormatter(Component):
             project_desc = self.env.project_description,
             project_link = self.env.project_url or self.env.abs_href(),
         )
+        old_page = WikiPage(self.env, page.name, page.version - 1)
         if page.version:
             data["changed"] = True
             data["diff_link"] = self.env.abs_href('wiki', page.name, 
                     action="diff", version=page.version)
+            if self.wiki_email_diff:
+                diff = "\n"
+                diff += diff_header % { 'name': page.name,
+                                       'version': page.version,
+                                       'oldversion': page.version - 1
+                                     }
+                for line in unified_diff(old_page.text.splitlines(),
+                                         page.text.splitlines(), context=3):
+                    diff += "%s\n" % line
+                data["diff"] = diff
         chrome = Chrome(self.env)        
         dirs = []
         for provider in chrome.template_providers:
