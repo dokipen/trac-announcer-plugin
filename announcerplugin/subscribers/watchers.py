@@ -19,6 +19,10 @@ class WatchSubscriber(Component):
     watchable_paths = ListOption('announcer', 'watchable_paths', 
         'wiki/*,ticket/*',
         doc='List of URL paths to allow watching. Globs are supported.')
+    ctxtnav_names = ListOption('announcer', 'ctxtnav_names',
+        ['Watch This','Unwatch This'],
+        doc="Text of context navigation entries. "
+            "An empty list removes them from the context navigation bar.")
 
     path_match = re.compile(r'/watch/(.*)')
 
@@ -140,13 +144,15 @@ class WatchSubscriber(Component):
 
     # Internal methods
     def render_watcher(self, req):
+        if not self.ctxtnav_names:
+          return
         resource = self.normalise_resource(req.path_info)
         realm, resource = resource.split('/', 1)
         if self.is_watching(req.session.sid, not req.authname == 'anonymous', 
                 realm, resource):
-            action_name = "Unwatch This"
+            action_name = self.ctxtnav_names[0]
         else:
-            action_name = "Watch This"
+            action_name = self.ctxtnav_names[1]
         add_ctxtnav(req, 
             tag.a(
                 action_name, href=req.href.watch(realm, resource)
