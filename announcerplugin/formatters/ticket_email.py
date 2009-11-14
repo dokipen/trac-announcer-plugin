@@ -1,13 +1,14 @@
-from trac.core import Component, implements
 from announcerplugin.api import IAnnouncementFormatter
-from trac.config import Option, IntOption, ListOption
-from genshi.template import NewTextTemplate, MarkupTemplate
 from genshi import HTML
-from trac.web.href import Href
-from trac.web.chrome import Chrome
+from genshi.template import NewTextTemplate, MarkupTemplate
 from genshi.template import TemplateLoader
+from trac.config import Option, IntOption, ListOption
+from trac.core import Component, implements
 from trac.util.text import wrap, to_unicode
+from trac.ticket.api import TicketSystem
 from trac.versioncontrol.diff import diff_blocks
+from trac.web.chrome import Chrome
+from trac.web.href import Href
 import difflib
 
 def diff_cleanup(gen):
@@ -38,7 +39,8 @@ class TicketEmailFormatter(Component):
     ticket_email_header_fields = ListOption('announcer', 
             'ticket_email_header_fields', 
             'owner, reporter, milestone, priority, severity',
-            doc="""Comma seperated list of fields to appear in tickets.""")
+            doc="""Comma seperated list of fields to appear in tickets.  
+            Use * to include all headers.""")
     
     def get_format_transport(self):
         return "email"
@@ -102,11 +104,12 @@ class TicketEmailFormatter(Component):
                     lineup(wrap(new_value, cols=67).split('\n')))
             else:
                 short_changes[field.capitalize()] = (old_value, new_value)
+
         data = dict(
             ticket = ticket,
             author = event.author,
             comment = event.comment,
-            header = self.ticket_email_header_fields,
+            header = self._header_fields(ticket),
             category = event.category,
             ticket_link = self.env.abs_href('ticket', ticket.id),
             project_name = self.env.project_name,
@@ -128,6 +131,13 @@ class TicketEmailFormatter(Component):
             stream = template.generate(**data)
             output = stream.render('text')
         return output
+
+    def _header_fields(self, ticket):
+        headers = self.ticket_email_header_fields
+        if len(headers) and headers[0].strip() == '*':
+            tsystem = TicketSystem(self.env)
+            headers = map(lambda x: x['name'], tsystem.get_ticket_fields())
+        return headers 
         
     def _format_html(self, event):
         ticket = event.target
@@ -157,7 +167,7 @@ class TicketEmailFormatter(Component):
         data = dict(
             ticket = ticket,
             author = event.author,
-            header = self.ticket_email_header_fields,
+            header = self._header_fields(ticket),
             comment = event.comment,
             category = event.category,
             ticket_link = self.env.abs_href('ticket', ticket.id),
