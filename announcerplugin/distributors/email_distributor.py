@@ -287,8 +287,7 @@ class EmailDistributor(Component):
             except UnicodeDecodeError:
                 raise TracError(_("Ticket contains non-ASCII chars. " \
                                   "Please change encoding setting"))
-        del rootMessage['Content-Transfer-Encoding']
-        rootMessage.set_charset(self._charset)
+
         rootMessage['Subject'] = Header(subject, self._charset) 
         from_header = '"%s" <%s>'%(self.smtp_from_name or proj_name, 
                 self.smtp_from)
@@ -309,8 +308,6 @@ class EmailDistributor(Component):
         if alternate_output:
             alt_msg_format = 'html' in alternate_format and 'html' or 'plain'
             msgText = MIMEText(alternate_output, alt_msg_format)
-            del msgText['Content-Transfer-Encoding']
-            msgText.set_charset(self._charset)
             parentMessage.attach(msgText)
         msg_format = 'html' in format and 'html' or 'plain'
         msgText = MIMEText(output, msg_format)
