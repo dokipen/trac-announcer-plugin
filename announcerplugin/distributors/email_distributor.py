@@ -289,8 +289,10 @@ class EmailDistributor(Component):
                                   "Please change encoding setting"))
 
         rootMessage['Subject'] = Header(subject, self._charset) 
-        from_header = '"%s" <%s>'%(self.smtp_from_name or proj_name, 
-                self.smtp_from)
+        from_header = '"%s" <%s>'%(
+            Header(self.smtp_from_name or proj_name, self._charset),
+            self.smtp_from
+        )
         rootMessage['From'] = from_header
         if self.smtp_always_bcc:
             rootMessage['Bcc'] = self.smtp_always_bcc
