@@ -326,7 +326,11 @@ class EmailDistributor(Component):
                 %(round(stop-start,2)))
 
     def _transmit(self, smtpfrom, addresses, message):
-        smtp = smtplib.SMTP(self.smtp_server, self.smtp_port)
+        # use defaults to make sure connect() is called in the constructor
+        smtp = smtplib.SMTP(
+            self.smtp_server or 'localhost', 
+            self.smtp_port or 25
+        )
         if self.use_tls:
             smtp.ehlo()
             if not smtp.esmtp_features.has_key('starttls'):
