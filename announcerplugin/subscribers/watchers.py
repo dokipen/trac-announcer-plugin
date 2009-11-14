@@ -46,12 +46,12 @@ class WatchSubscriber(Component):
         realm, resource = resource.split('/', 1)
         if self.is_watching(sid, authenticated, realm, resource):
             self.set_unwatch(sid, authenticated, realm, resource)
-            self._schedule_notice(req, 'You are no longer watching this ' \
-                    'resource for changes.')
+            self._schedule_notice(req, 'You are no longer receiving ' \
+                    'change notifications about this resource.')
         else:
             self.set_watch(sid, authenticated, realm, resource)
-            self._schedule_notice(req, 'You are now watching this resource ' \
-                    'for changes.')
+            self._schedule_notice(req, 'You are now receiving ' \
+                    'change notifications about this resource.')
             
     def _schedule_notice(self, req, message):
         req.session['_announcer_watch_message_'] = message
@@ -150,9 +150,11 @@ class WatchSubscriber(Component):
         realm, resource = resource.split('/', 1)
         if self.is_watching(req.session.sid, not req.authname == 'anonymous', 
                 realm, resource):
-            action_name = self.ctxtnav_names[0]
+            action_name = len(self.ctxtnav_names) >= 2 and \
+                    self.ctxtnav_names[1] or 'Unwatch This'
         else:
-            action_name = self.ctxtnav_names[1]
+            action_name = len(self.ctxtnav_names) and \
+                    self.ctxtnav_names[0] or 'Watch This'
         add_ctxtnav(req, 
             tag.a(
                 action_name, href=req.href.watch(realm, resource)
