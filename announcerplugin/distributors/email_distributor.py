@@ -146,62 +146,62 @@ class EmailDistributor(Component):
     # IAnnouncementDistributor
     def get_distribution_transport(self):
         return "email"
+
+    def formats(self, transport, realm):
+        "Find valid formats for transport and realm"
+        formats = {}
+        for f in self.formatters:
+            if f.get_format_transport() == transport:
+                if realm in f.get_format_realms(transport):
+                    styles = f.get_format_styles(transport, realm)
+                    for style in styles:
+                        formats[style] = f
+        self.log.debug(
+            "EmailDistributor has found the following formats capable "
+            "of handling '%s' of '%s': %s"%(transport, realm, 
+                ', '.join(formats.keys())))
+        if not formats:
+            self.log.error("EmailDistributor is unable to continue " \
+                    "without supporting formatters.")
+        return formats
         
     def distribute(self, transport, recipients, event):
-        if not self.smtp_enabled:
+        if not self.smtp_enabled or transport != self.get_distribution_transport():
             return
-        public_cc = self.config.getbool('announcer', 'use_public_cc')
-        to = self.config.get('announcer', 'smtp_to')
-        if transport == self.get_distribution_transport():
-            formats = {}
-            for f in self.formatters:
-                if f.get_format_transport() == transport:
-                    if event.realm in f.get_format_realms(transport):
-                        styles = f.get_format_styles(transport, event.realm)
-                        for style in styles:
-                            formats[style] = f
+        fmtdict = self.formats(transport, event.realm)
+        if not fmtdict:
+            return
+        msgdict = {}
+        for name, authed, addr in recipients:
+            fmt = name and \
+                self._get_preferred_format(event.realm, name, authed) or \
+                self._get_default_format()
+                
+            if name and not addr:
+                for rslvr in self.resolvers:
+                    addr = rslvr.get_address_for_name(name, authed)
+                    if addr:
+                        self.log.debug("EmailDistributor found the " \
+                                "address '%s' for '%s (%s)' via: %s"%(
+                                addr, name, authed and \
+                                'authenticated' or 'not authenticated', 
+                                rslvr.__class__.__name__))
+                        break
+            if addr:
+                msgdict.setdefault(fmt, set()).add((name, authed, addr))
+            else:
+                self.log.debug("EmailDistributor was unable to find an " \
+                        "address for: %s (%s)"%(name, authed and \
+                        'authenticated' or 'not authenticated'))
+        for msgset, fmtr, fmt in [
+                (msgdict[f], fmtdict[f], f) for f in msgdict.keys()
+                ]:
+            if not msgset:
+                continue
             self.log.debug(
-                "EmailDistributor has found the following formats capable "
-                "of handling '%s' of '%s': %s"%(transport, event.realm, 
-                    ', '.join(formats.keys())))
-            
-            if not formats:
-                self.log.error("EmailDistributor is unable to continue " \
-                        "without supporting formatters.")
-                return
-            messages = {}
-            for name, authenticated, address in recipients:
-                if name:
-                    format = self._get_preferred_format(event.realm, name, 
-                            authenticated)
-                else:
-                    format = self._get_default_format()
-                if format not in messages:
-                    messages[format] = set()
-                if name and not address:
-                    for resolver in self.resolvers:
-                        address = resolver.get_address_for_name(name, 
-                                authenticated)
-                        if address:
-                            self.log.debug("EmailDistributor found the " \
-                                    "address '%s' for '%s (%s)' via: %s"%(
-                                    address, name, authenticated and \
-                                    'authenticated' or 'not authenticated', 
-                                    resolver.__class__.__name__))
-                            break
-                if address:
-                    messages[format].add((name, authenticated, address))
-                else:
-                    self.log.debug("EmailDistributor was unable to find an " \
-                            "address for: %s (%s)"%(name, authenticated and \
-                            'authenticated' or 'not authenticated'))
-            for format in messages.keys():
-                if messages[format]:
-                    self.log.debug(
-                        "EmailDistributor is sending event as '%s' to: %s"%(
-                            format, ', '.join(x[2] for x in messages[format])))
-                    self._do_send(transport, event, format, messages[format], 
-                            formats[format], None, to, public_cc)
+                "EmailDistributor is sending event as '%s' to: %s"%(
+                    fmt, ', '.join(x[2] for x in msgset)))
+            self._do_send(transport, event, fmt, msgset, fmtr)
                     
     def _get_default_format(self):
         return self.default_email_format
@@ -230,7 +230,7 @@ class EmailDistributor(Component):
         from email.Charset import Charset, QP, BASE64
         self._charset = Charset()
         self._charset.input_charset = 'utf-8'
-        pref = self.env.config.get('announcer', 'mime_encoding').lower()
+        pref = self.mime_encoding.lower()
         if pref == 'base64':
             self._charset.header_encoding = BASE64
             self._charset.body_encoding = BASE64
@@ -251,8 +251,7 @@ class EmailDistributor(Component):
         else:
             raise TracError(_('Invalid email encoding setting: %s'%pref))
 
-    def _do_send(self, transport, event, format, recipients, formatter, 
-            backup=None, to=None, public_cc=False):
+    def _do_send(self, transport, event, format, recipients, formatter):
         output = formatter.format(transport, event.realm, format, event)
         subject = formatter.format_subject(transport, event.realm, format, 
                 event)
@@ -296,9 +295,9 @@ class EmailDistributor(Component):
         rootMessage['From'] = from_header
         if self.smtp_always_bcc:
             rootMessage['Bcc'] = self.smtp_always_bcc
-        if to:
-            rootMessage['To'] = '"%s"'%(to)
-        if public_cc:
+        if self.smtp_to:
+            rootMessage['To'] = '"%s"'%(self.smtp_to)
+        if self.use_public_cc:
             rootMessage['Cc'] = ', '.join([x[2] for x in recipients if x])
         rootMessage['Reply-To'] = self.smtp_replyto
         rootMessage.preamble = 'This is a multi-part message in MIME format.'
@@ -348,8 +347,6 @@ class EmailDistributor(Component):
         yield "email", "E-Mail Format"
         
     def render_announcement_preference_box(self, req, panel):
-        cfg = self.config
-        sess = req.session
         transport = self.get_distribution_transport()
         supported_realms = {}
         for formatter in self.formatters:
@@ -364,10 +361,10 @@ class EmailDistributor(Component):
             for realm in supported_realms:
                 opt = req.args.get('email_format_%s'%realm, False)
                 if opt:
-                    sess['announcer_email_format_%s'%realm] = opt
+                    req.session['announcer_email_format_%s'%realm] = opt
         prefs = {}
         for realm in supported_realms:
-            prefs[realm] = sess.get('announcer_email_format_%s'%realm, None)
+            prefs[realm] = req.session.get('announcer_email_format_%s'%realm, None)
         data = dict(
             realms = supported_realms,
             preferences = prefs,
