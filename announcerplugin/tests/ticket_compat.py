@@ -50,7 +50,7 @@ class StaticTicketSubscriberTestCase(unittest.TestCase):
 
     def test_list_size(self):
         subs = [s for s in self.out.get_subscriptions_for_event(None)]
-        asswertEquals(6, len(subs))
+        self.assertEquals(6, len(subs))
 
 def suite():
     suite = unittest.TestSuite()
