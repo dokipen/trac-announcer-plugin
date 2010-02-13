@@ -48,11 +48,17 @@ class EmailDistributor(Component):
     smtp_enabled = BoolOption('announcer', 'smtp_enabled', 'false',
         """Enable SMTP (email) notification.""")
 
+    smtp_debuglevel = IntOption('announcer', 'smtp_debuglevel', 0,
+        """Debug level to pass to smtp python lib""")
+
     smtp_server = Option('announcer', 'smtp_server', 'localhost',
         """SMTP server hostname to use for email notifications.""")
 
     smtp_port = IntOption('announcer', 'smtp_port', 25,
         """SMTP server port to use for email notification.""")
+
+    smtp_timeout = IntOption('announcer', 'smtp_timeout', 10,
+        """SMTP server connection timeout.""")
 
     smtp_user = Option('announcer', 'smtp_user', '',
         """Username for SMTP server. (''since 0.9'').""")
@@ -330,9 +336,12 @@ class EmailDistributor(Component):
     def _transmit(self, smtpfrom, addresses, message):
         # use defaults to make sure connect() is called in the constructor
         smtp = smtplib.SMTP(
-            self.smtp_server or 'localhost', 
-            self.smtp_port or 25
+            host=self.smtp_server,
+            port=self.smtp_port,
+            timeout=self.smtp_timeout
         )
+        if self.smtp_debuglevel:
+            smtp.set_debuglevel(self.smtp_debuglevel)
         if self.use_tls:
             smtp.ehlo()
             if not smtp.esmtp_features.has_key('starttls'):
