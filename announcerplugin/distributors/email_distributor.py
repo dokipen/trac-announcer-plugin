@@ -70,6 +70,9 @@ class EmailDistributor(Component):
     smtp_from = Option('announcer', 'smtp_from', 'trac@localhost',
         """Sender address to use in notification emails.""")
         
+    smtp_ssl = BoolOption('announcer', 'smtp_ssl', 'false',
+        doc="""Use ssl for smtp connection.""")
+        
     smtp_from_name = Option('announcer', 'smtp_from_name', '',
         """Sender name to use in notification emails.""")
 
@@ -391,11 +394,18 @@ class EmailDistributor(Component):
 
     def _transmit(self, smtpfrom, addresses, message):
         # use defaults to make sure connect() is called in the constructor
-        smtp = smtplib.SMTP(
-            host=self.smtp_server,
-            port=self.smtp_port,
-            timeout=self.smtp_timeout
-        )
+        if self.smtp_ssl:
+            smtp = smtplib.SMTP_SSL(
+                host=self.smtp_server,
+                port=self.smtp_port,
+                timeout=self.smtp_timeout
+            )
+        else:
+            smtp = smtplib.SMTP(
+                host=self.smtp_server,
+                port=self.smtp_port,
+                timeout=self.smtp_timeout
+            )
         if self.smtp_debuglevel:
             smtp.set_debuglevel(self.smtp_debuglevel)
         if self.use_tls:
