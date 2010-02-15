@@ -176,6 +176,10 @@ class TicketEmailFormatter(Component):
                 abs_href=self.env.abs_href(),
                 authname=event.author, 
                 perm=MockPerm(),
+                chrome=dict(
+                    warnings=[],
+                    notices=[]
+                ),
                 args={}
             )
             context = Context.from_request(req, event.realm, event.target.id)
