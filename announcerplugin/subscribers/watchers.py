@@ -1,4 +1,7 @@
 import re
+
+from fnmatch import fnmatch
+
 from trac.core import *
 from trac.config import ListOption
 from trac.web.api import IRequestFilter, IRequestHandler, Href
@@ -134,7 +137,7 @@ class WatchSubscriber(Component):
                 'email' in req.session):
             for pattern in self.watchable_paths:
                 path = self.normalise_resource(req.path_info)
-                if re.match(pattern, path):
+                if fnmatch(path, pattern):
                     realm = path.split('/', 1)[0]
                     if '%s_VIEW'%realm.upper() not in req.perm:
                         return (template, data, content_type)
