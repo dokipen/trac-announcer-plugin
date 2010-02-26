@@ -57,9 +57,6 @@ class EmailDistributor(Component):
     smtp_port = IntOption('announcer', 'smtp_port', 25,
         """SMTP server port to use for email notification.""")
 
-    smtp_timeout = IntOption('announcer', 'smtp_timeout', 10,
-        """SMTP server connection timeout.""")
-
     smtp_user = Option('announcer', 'smtp_user', '',
         """Username for SMTP server. (''since 0.9'').""")
 
@@ -337,8 +334,7 @@ class EmailDistributor(Component):
         # use defaults to make sure connect() is called in the constructor
         smtp = smtplib.SMTP(
             host=self.smtp_server,
-            port=self.smtp_port,
-            timeout=self.smtp_timeout
+            port=self.smtp_port
         )
         if self.smtp_debuglevel:
             smtp.set_debuglevel(self.smtp_debuglevel)
