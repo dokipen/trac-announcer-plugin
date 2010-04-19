@@ -85,8 +85,8 @@ class TicketEmailFormatter(Component):
                     if 'status' in event.changes:
                         action = 'Status -> %s' % (event.target['status'])
                 template = NewTextTemplate(self.ticket_email_subject)
-                return template.generate(ticket=event.target, event=event, 
-                        action=action).render()
+                return to_unicode(template.generate(ticket=event.target, event=event,
+                        action=action).render())
                 
     def format(self, transport, realm, style, event):
         if transport == "email":

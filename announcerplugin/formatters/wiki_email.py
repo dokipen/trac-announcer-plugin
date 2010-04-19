@@ -7,7 +7,7 @@ from trac.web.href import Href
 from trac.web.chrome import Chrome
 from trac.wiki.model import WikiPage
 from genshi.template import TemplateLoader
-from trac.util.text import wrap
+from trac.util.text import to_unicode, wrap
 from trac.versioncontrol.diff import diff_blocks, unified_diff
 import difflib
 
@@ -67,8 +67,8 @@ class WikiEmailFormatter(Component):
         if transport == "email":
             if realm == "wiki":
                 template = NewTextTemplate(self.wiki_email_subject)
-                return template.generate(page=event.target, event=event, 
-                        action=event.category).render()
+                return to_unicode(template.generate(page=event.target, event=event,
+                        action=event.category).render())
                 
     def format(self, transport, realm, style, event):
         if transport == "email":

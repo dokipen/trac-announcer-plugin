@@ -313,6 +313,7 @@ class EmailDistributor(Component):
         else:
             alternate_output = None
         rootMessage = MIMEMultipart("related")
+        rootMessage.set_charset(self._charset)
         proj_name = self.env.project_name
         trac_version = get_pkginfo(trac.core).get('version', trac.__version__)
         announcer_version = get_pkginfo(announcerplugin).get('version', 
